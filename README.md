@@ -3,6 +3,7 @@
 **Author:** Alven Yuka, CPA Finalist
 **Dataset:** [Home Credit Default Risk (Kaggle)](https://www.kaggle.com/competitions/home-credit-default-risk), real competition data, 307,511 applicants, 8 relational tables
 **Approach:** WoE/IV-selected features, a from-scratch logistic regression validated against scikit-learn, and a LightGBM benchmark
+**Live case study:** [credit-risk-alven.vercel.app](https://credit-risk-alven.vercel.app), includes an interactive explorer over 20 real held-out applicants
 
 > **This README replaces an earlier version that described a pipeline (748 engineered features, from-scratch decision trees and gradient boosting, coefficient agreement with sklearn to 1e-9) that was never actually built.** The docs were fabricated ahead of the code. Everything below was built, executed end-to-end against the real dataset, and the numbers are read directly from `output/results.json`, not restated by hand.
 
