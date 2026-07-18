@@ -10,6 +10,12 @@ PHASE E: From-scratch logistic regression, validated against sklearn
 PHASE F: LightGBM benchmark
 PHASE G: Metrics (hand-coded AUC/GINI/KS/PSI/Brier/calibration), validated against sklearn
 PHASE H: Persist results
+
+Every number in README.md, BUILD_STATUS.md, and Credit_Risk_Scorecard.ipynb
+traces back to a run of this exact script -- nothing is hand-restated. If a
+claim in those docs doesn't match a fresh run of this file, the docs are
+wrong, not the other way around (see README.md's opening paragraph for why
+that guarantee matters more than usual on this particular project).
 """
 
 import json
@@ -112,6 +118,13 @@ numeric_feature_cols = df[feature_cols].select_dtypes(include=[np.number]).colum
 X_all = df[numeric_feature_cols]
 y_all = df[target_col]
 
+# Two-stage split (70/30, then 50/50 of the 30) rather than a single
+# three-way split because sklearn's train_test_split only splits in two;
+# stratifying twice on the same target keeps the ~8.07% default rate
+# consistent across all three resulting sets (see the printed rates below --
+# train/val/test land within 0.001 of each other). val exists to give
+# LightGBM's early stopping (Phase F) a held-out set to watch that isn't
+# the final test set it gets scored against.
 X_train, X_temp, y_train, y_temp = train_test_split(
     X_all, y_all, test_size=0.30, stratify=y_all, random_state=SEED
 )
@@ -132,6 +145,12 @@ iv_table = iv_ranking(train_with_target, target_col, numeric_feature_cols, bins=
 print(f"IV computed for {len(iv_table)} features in {time.time()-t0:.0f}s")
 print(iv_table.head(15).to_string(index=False))
 
+# 80 of 400 candidate features: a round-number cutoff, not a value chosen by
+# tuning against test-set performance (which would itself be a form of
+# leakage). IV has already fallen from >0.6 (rank 1) to "Weak" territory
+# (~0.046, see woe_iv.py's IV_STRENGTH_BANDS) by rank 80 -- the top ~15-20
+# features (the EXT_SOURCE cluster and its interactions, see
+# figs/iv_top20.png) carry most of the real signal.
 N_FEATURES = 80
 selected_features = iv_table.head(N_FEATURES)["feature"].tolist()
 print(f"\nSelected top {len(selected_features)} features by IV")
