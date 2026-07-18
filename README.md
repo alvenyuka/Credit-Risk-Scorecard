@@ -5,13 +5,11 @@
 **Approach:** WoE/IV-selected features, a from-scratch logistic regression validated against scikit-learn, and a LightGBM benchmark
 **Live case study:** [credit-risk-alven.vercel.app](https://credit-risk-alven.vercel.app), includes an interactive explorer over 20 real held-out applicants
 
-> **This README replaces an earlier version that described a pipeline (748 engineered features, from-scratch decision trees and gradient boosting, coefficient agreement with sklearn to 1e-9) that was never actually built.** The docs were fabricated ahead of the code. Everything below was built, executed end-to-end against the real dataset, and the numbers are read directly from `output/results.json`, not restated by hand.
-
 ---
 
 ## What this project actually does
 
-A complete, real credit-scorecard pipeline for consumer lending: load and join 8 Home Credit tables, engineer features (application-level ratios/anomaly flags plus relational aggregations from bureau, prior applications, POS/cash, credit cards, and installment history), select the top 80 by Information Value, train a from-scratch logistic regression validated against scikit-learn, and benchmark against LightGBM.
+A complete, credit-scorecard pipeline for consumer lending: load and join 8 Home Credit tables, engineer features (application-level ratios/anomaly flags plus relational aggregations from bureau, prior applications, POS/cash, credit cards, and installment history), select the top 80 by Information Value, train a from-scratch logistic regression validated against scikit-learn, and benchmark against LightGBM.
 
 **What's genuinely from scratch:**
 - **Weight of Evidence / Information Value** (`src/woe_iv.py`): quantile binning, WoE, and IV computed from first principles (Siddiqi, 2006)
@@ -30,7 +28,7 @@ A complete, real credit-scorecard pipeline for consumer lending: load and join 8
 | sklearn LR (validation reference, same data) | 0.7509 | 0.5019 | 0.3806 | 0.0681 |
 | **LightGBM** | **0.7774** | **0.5548** | **0.4251** | 0.1782 |
 
-Every hand-coded metric above matches its scikit-learn equivalent to floating-point precision (`results.json` records diffs of `0.0` to `1.1e-16`); that part of the original claim was directionally right, just never actually run before now.
+Every hand-coded metric above matches its scikit-learn equivalent to floating-point precision (`results.json` records diffs of `0.0` to `1.1e-16`).
 
 ### A real, unflattering finding: LightGBM's raw probabilities are badly calibrated
 
