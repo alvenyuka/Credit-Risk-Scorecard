@@ -1,128 +1,118 @@
 """
-Weight of Evidence / Information Value, implemented from scratch (Siddiqi, 2006).
+Week 7 — Weight of Evidence / Information Value, from scratch.
 
-WoE and IV are the two workhorse concepts in classic credit scoring, and
-they answer two different questions:
+Convention used (the standard credit-scoring one):
+    WoE_bin = ln( dist_good_bin / dist_bad_bin )
+where dist_good_bin = (# non-defaults in bin) / (total non-defaults),
+      dist_bad_bin  = (# defaults in bin) / (total defaults).
 
-  WoE (per bin): "within this bin, what's the log-odds of being good
-                  vs. bad, relative to the population as a whole?"
-  IV (per feature): "summed across all its bins, how much does this
-                     feature separate good applicants from bad ones?"
+A positive WoE means a bin is safer than average (over-represented among
+goods); negative means riskier. IV is the WoE-weighted gap between the two
+distributions, summed across bins — a standard predictive-power score:
+  <0.02 useless, 0.02-0.1 weak, 0.1-0.3 medium, 0.3-0.5 strong, >0.5 suspicious
+  (often a leak) — that last bucket is a genuinely useful red flag, not just
+  a good score.
 
-The reason this combination is still standard in regulated lending, even
-with gradient boosting freely available, is that WoE-transformed features
-feed directly into a logistic regression whose coefficients stay
-interpretable: a positive WoE bin pulls the score up, a negative one pulls
-it down, and the size of the pull is visible per bin, not buried inside a
-tree ensemble. See from_scratch_lr.py and README.md's "Why WoE/IV" section
-for the rest of that argument.
+Binning is fit once on train (quantile edges for numeric columns, the raw
+category set for categorical ones) and then *applied* to any other split —
+computing fresh quantiles per split would leak information about that split's
+own label distribution into its own bins.
+
+Zero-count bins would send WoE to +/-inf (log of 0). Laplace-style smoothing
+(epsilon added to both good and bad counts) avoids that without distorting
+well-populated bins much.
 """
-
 import numpy as np
 import pandas as pd
 
-
-def _woe_iv_table(bin_series: pd.Series, target: pd.Series) -> pd.DataFrame:
-    """
-    Given a binned/categorical feature and a binary target, compute WoE and IV per bin.
-
-    "Good" here follows credit-scoring convention: good = non-default
-    (TARGET == 0), bad = default (TARGET == 1). WoE = ln(%good / %bad) in a
-    bin, so a bin with more good applicants than the population baseline
-    gets a positive WoE, and a riskier-than-average bin gets a negative one.
-    """
-    df = pd.DataFrame({"bin": bin_series, "target": target})
-    grouped = df.groupby("bin", observed=True)["target"].agg(["count", "sum"])
-    grouped.columns = ["total", "bad"]
-    grouped["good"] = grouped["total"] - grouped["bad"]
-
-    total_bad = grouped["bad"].sum()
-    total_good = grouped["good"].sum()
-
-    # Laplace-style smoothing avoids -inf/+inf WoE on empty bins. Without it,
-    # a bin with zero defaults (common in small, high-quality bins) computes
-    # ln(x/0) = inf, which would make that single bin dominate every
-    # downstream IV comparison. eps=0.5 is the traditional credit-scoring
-    # convention (a "half event" added to every bin), not a tuned parameter.
-    eps = 0.5
-    grouped["bad_rate"] = (grouped["bad"] + eps) / (total_bad + eps * len(grouped))
-    grouped["good_rate"] = (grouped["good"] + eps) / (total_good + eps * len(grouped))
-
-    grouped["woe"] = np.log(grouped["good_rate"] / grouped["bad_rate"])
-    # IV contribution per bin: (%good - %bad) * WoE. Bins that are both
-    # skewed (big %good - %bad gap) AND have a big WoE swing contribute the
-    # most; a bin that's 50/50 good/bad contributes ~0 regardless of size.
-    grouped["iv_contribution"] = (grouped["good_rate"] - grouped["bad_rate"]) * grouped["woe"]
-
-    return grouped
+MISSING_LABEL = "Missing"
 
 
-def calc_woe_iv(feature: pd.Series, target: pd.Series, bins: int = 10) -> tuple[pd.DataFrame, float]:
-    """
-    Compute WoE table and total IV for one feature.
-
-    Numeric features are quantile-binned (equal-frequency, not equal-width --
-    equal-width bins would put almost all applicants in one or two bins for
-    a right-skewed feature like AMT_INCOME_TOTAL); low-cardinality / object
-    features are treated as already-categorical, one bin per category.
-    """
-    if pd.api.types.is_numeric_dtype(feature) and feature.nunique() > bins:
-        binned = pd.qcut(feature, q=bins, duplicates="drop")
-    else:
-        binned = feature.astype("category")
-
-    table = _woe_iv_table(binned, target)
-    total_iv = table["iv_contribution"].sum()
-    return table, total_iv
+def fit_continuous_bins(x: pd.Series, n_bins: int = 10) -> np.ndarray:
+    finite = x.dropna()
+    edges = np.unique(np.quantile(finite, np.linspace(0, 1, n_bins + 1)))
+    if len(edges) < 3:
+        edges = np.array([finite.min(), finite.max()])
+    edges[0] = -np.inf
+    edges[-1] = np.inf
+    return edges
 
 
-def iv_ranking(df: pd.DataFrame, target_col: str, feature_cols: list[str], bins: int = 10) -> pd.DataFrame:
-    """
-    Rank every feature in feature_cols by Information Value.
-
-    Must be called on the train split only -- ranking on the full dataset
-    (including val/test rows) would leak information about the holdout sets
-    into feature selection, inflating every downstream metric. run_pipeline.py
-    enforces this by only ever passing X_train into this function.
-    """
-    rows = []
-    for col in feature_cols:
-        try:
-            valid = df[[col, target_col]].dropna()
-            # Skip features that are almost entirely missing or constant --
-            # qcut can't form meaningful bins from fewer than ~100 valid rows
-            # or a single unique value, and the resulting IV would be noise,
-            # not signal.
-            if len(valid) < 100 or valid[col].nunique() < 2:
-                continue
-            _, iv = calc_woe_iv(valid[col], valid[target_col], bins=bins)
-            rows.append({"feature": col, "iv": iv})
-        except (ValueError, TypeError):
-            # qcut raises ValueError on some pathological distributions
-            # (e.g. a feature with too few distinct values to fill `bins`
-            # quantiles even after the nunique check above); skipping rather
-            # than crashing the whole ranking over one bad column.
-            continue
-    return pd.DataFrame(rows).sort_values("iv", ascending=False).reset_index(drop=True)
+def apply_continuous_bins(x: pd.Series, edges: np.ndarray) -> pd.Series:
+    labels = pd.cut(x, bins=edges, include_lowest=True).astype(str)
+    labels = labels.where(~x.isna(), MISSING_LABEL)
+    return labels
 
 
-# Conventional IV interpretation bands from Siddiqi (2006), used throughout
-# the credit-scoring industry as a rule of thumb for "is this feature worth
-# including." An IV above 0.5 is flagged as suspicious rather than simply
-# "excellent" because in practice a feature that predictive is more often a
-# sign of leakage (the feature encodes something only knowable after the
-# outcome) than a genuinely powerful predictor.
-IV_STRENGTH_BANDS = [
-    (0.02, "Not useful"),
-    (0.10, "Weak"),
-    (0.30, "Medium"),
-    (0.50, "Strong"),
-    (float("inf"), "Suspicious (check for leakage)"),
-]
+def _bin_labels(x: pd.Series, is_categorical: bool, edges) -> pd.Series:
+    if is_categorical:
+        labels = x.astype(str)
+        labels = labels.where(~x.isna(), MISSING_LABEL)
+        return labels
+    return apply_continuous_bins(x, edges)
+
+
+def fit_woe(x: pd.Series, y: pd.Series, is_categorical: bool = False,
+            n_bins: int = 10, epsilon: float = 0.5) -> dict:
+    edges = None if is_categorical else fit_continuous_bins(x, n_bins)
+    bins = _bin_labels(x, is_categorical, edges)
+
+    df = pd.DataFrame({"bin": bins, "y": y.values})
+    total_good = int((df["y"] == 0).sum())
+    total_bad = int((df["y"] == 1).sum())
+
+    grouped = df.groupby("bin", observed=True)["y"].agg(n="count", bad="sum")
+    grouped["good"] = grouped["n"] - grouped["bad"]
+
+    n_bins_actual = len(grouped)
+    dist_good = (grouped["good"] + epsilon) / (total_good + epsilon * n_bins_actual)
+    dist_bad = (grouped["bad"] + epsilon) / (total_bad + epsilon * n_bins_actual)
+    grouped["woe"] = np.log(dist_good / dist_bad)
+    grouped["iv_contrib"] = (dist_good - dist_bad) * grouped["woe"]
+
+    return {
+        "edges": edges,
+        "is_categorical": is_categorical,
+        "table": grouped,
+        "iv": float(grouped["iv_contrib"].sum()),
+    }
+
+
+def transform_woe(x: pd.Series, fit_result: dict) -> pd.Series:
+    bins = _bin_labels(x, fit_result["is_categorical"], fit_result["edges"])
+    mapped = bins.map(fit_result["table"]["woe"])
+    return mapped.fillna(0.0)  # unseen bin/category on a new split -> neutral
 
 
 def iv_strength(iv: float) -> str:
-    for threshold, label in IV_STRENGTH_BANDS:
-        if iv < threshold:
-            return label
-    return IV_STRENGTH_BANDS[-1][1]
+    if iv < 0.02:
+        return "useless"
+    if iv < 0.1:
+        return "weak"
+    if iv < 0.3:
+        return "medium"
+    if iv < 0.5:
+        return "strong"
+    return "suspiciously strong (check for leakage)"
+
+
+if __name__ == "__main__":
+    # Sanity checks before trusting this on real data:
+    # 1. a feature perfectly separating the classes should have very high IV.
+    # 2. a feature with no relationship to the target should have IV ~ 0.
+    rng = np.random.default_rng(0)
+    n = 20000
+    y = pd.Series(rng.integers(0, 2, n))
+
+    perfect = pd.Series(y.values + rng.normal(0, 0.01, n))  # near-perfect separator
+    noise = pd.Series(rng.normal(0, 1, n))                  # unrelated to y
+
+    fit_perfect = fit_woe(perfect, y, n_bins=10)
+    fit_noise = fit_woe(noise, y, n_bins=10)
+
+    print(f"near-perfect separator IV: {fit_perfect['iv']:.3f} ({iv_strength(fit_perfect['iv'])})")
+    print(f"pure noise IV:             {fit_noise['iv']:.3f} ({iv_strength(fit_noise['iv'])})")
+
+    assert fit_perfect["iv"] > 1.0, "a near-perfect separator should have a very high IV"
+    assert fit_noise["iv"] < 0.02, "pure noise should score as useless"
+    print("sanity checks passed")
