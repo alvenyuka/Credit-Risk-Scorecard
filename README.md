@@ -1,141 +1,130 @@
-# Credit Risk Scorecard: Home Credit Default Risk
+# Credit Risk Scorecard — a blind, from-scratch rebuild
 
-**Author:** Alven Yuka, CPA Finalist
-**Dataset:** [Home Credit Default Risk (Kaggle)](https://www.kaggle.com/competitions/home-credit-default-risk), real competition data, 307,511 applicants, 8 relational tables
-**Approach:** WoE/IV-selected features, a from-scratch logistic regression validated against scikit-learn, and a LightGBM benchmark
-**Live case study:** [credit-risk-alven.vercel.app](https://credit-risk-alven.vercel.app), includes an interactive explorer over 20 real held-out applicants
+**This content replaced an earlier, more complete version of this repo**
+(400 candidate features vs. this rebuild's 65, a LightGBM benchmark,
+calibration figures, and a live demo site) **on purpose.** That earlier
+pipeline was real and independently re-verified — it isn't gone, it's in
+this repo's git history, and its full numbers are quoted throughout this
+README for comparison. What's here now is a deliberate blind rebuild of it:
+same dataset, own feature choices, own bugs found and fixed in the open,
+built without reading the original code until the verification step. The
+earlier version had polish this one doesn't (LightGBM, a live demo); this
+one shows something the earlier version didn't: the actual process, mistakes
+included — built as a mastery exercise rather than a copy, with a plainer
+goal than a bigger AUC number: can this get scored, and can it explain
+*why*, in language a credit committee and a hiring manager would both
+accept?
 
----
+## The business question
 
-## What this project actually does
+Home Credit's application data (307,511 applicants, 8 relational tables)
+plus a decision to make: should this applicant get the loan, and if not,
+what's the specific, defensible reason? A model that only outputs a
+probability doesn't answer the second half.
 
-A complete, credit-scorecard pipeline for consumer lending: load and join 8 Home Credit tables, engineer features (application-level ratios/anomaly flags plus relational aggregations from bureau, prior applications, POS/cash, credit cards, and installment history), select the top 80 by Information Value, train a from-scratch logistic regression validated against scikit-learn, and benchmark against LightGBM.
+## What was built, and how (four weeks, compressed)
 
-**What's genuinely from scratch:**
-- **Weight of Evidence / Information Value** (`src/woe_iv.py`): quantile binning, WoE, and IV computed from first principles (Siddiqi, 2006)
-- **Logistic regression** (`src/from_scratch_lr.py`): sigmoid, cross-entropy loss, batch gradient descent, L2 regularization, all in NumPy
-- **Evaluation metrics** (`src/metrics.py`): ROC-AUC (Mann-Whitney U rank-sum formulation), GINI, KS statistic, Brier score, PSI, calibration curves, every one hand-coded, every one validated against scikit-learn's equivalent on the same predictions
+1. **Blind baseline** ([`week6_log.md`](notes/week6_log.md)) — raw
+   application data only, own feature choices (caught the `DAYS_EMPLOYED`
+   365243-placeholder anomaly from the raw data, not from being told about
+   it), a naive logistic regression. **0.7487 AUC**, a floor to beat.
+2. **Primitives from scratch** ([`week7_log.md`](notes/week7_log.md)) — WoE/IV,
+   logistic regression via batch gradient descent, and AUC/GINI/KS/PSI, all
+   hand-coded and validated against sklearn/scipy to floating-point
+   precision. Found and fixed a real KS-statistic bug along the way (ties
+   evaluated mid-tie-block instead of at distinct score values).
+3. **Relational features + the multicollinearity chase**
+   ([`week8_log.md`](notes/week8_log.md)) — own aggregations from bureau,
+   previous-application, POS/cash, credit-card, and installment history
+   lifted AUC to **0.7622**, KS to **0.394**. Deliberately went looking for
+   the sklearn-vs-scratch coefficient divergence the oracle documents, found
+   a real one, and then found a bug in *how it was being measured*
+   (`class_weight="balanced"` on one side, not the other) — fixing that
+   collapsed the divergence from 0.019 to 0.0031. Built a PDO scorecard
+   (base 600, base odds 20:1, PDO 40) with working reason codes: a sampled
+   declined applicant's biggest point losses were `DAYS_EMPLOYED_ANOM`
+   (-17.9), `PREV_REFUSED_SHARE` (-10.2), `BUREAU_DAYS_CREDIT_MIN` (-9.2).
+4. **Verification** ([`week9_log.md`](notes/week9_log.md)) — diffed every
+   number against the oracle's `output/results.json` and its README. The
+   oracle's own small-feature-set check (0.004 coefficient diff) matches
+   this rebuild's corrected number (0.0031) closely; the oracle's larger
+   full-set divergence (0.298) comes from a much more extreme
+   multicollinearity design (literal `EXT_SOURCE_1_x_2`-style interaction
+   terms) than this rebuild's feature set has.
 
-**What's a library benchmark, honestly labeled as such:** LightGBM. No from-scratch decision tree or gradient boosting implementation exists in this repo, an earlier draft of these docs claimed one did. It didn't.
+## Results
 
----
-
-## Headline results: test set, n = 46,127
-
-| Model | AUC | GINI | KS | Brier |
-|---|---:|---:|---:|---:|
-| From-scratch LR | 0.7509 | 0.5019 | 0.3771 | 0.0681 |
-| sklearn LR (validation reference, same data) | 0.7509 | 0.5019 | 0.3806 | 0.0681 |
-| **LightGBM** | **0.7774** | **0.5548** | **0.4251** | 0.1782 |
-
-Every hand-coded metric above matches its scikit-learn equivalent to floating-point precision (`results.json` records diffs of `0.0` to `1.1e-16`).
-
-### A real, unflattering finding: LightGBM's raw probabilities are badly calibrated
-
-<img src="figs/calibration_curve.png" width="500" alt="Calibration curve: from-scratch LR vs LightGBM">
-
-The from-scratch LR tracks the diagonal almost exactly. LightGBM's raw output systematically understates default probability: at a true default rate of ~25% in the highest-risk decile, LightGBM's mean predicted probability sits under 10%. LightGBM wins on discrimination (AUC, GINI, KS all higher) but would need isotonic or Platt calibration before its probabilities could be used directly in an expected-loss calculation (`EL = PD x LGD x EAD`). This is a genuine trade-off the original (unexecuted) draft never surfaced, because it never ran anything.
-
----
-
-## From-scratch LR vs. sklearn: what "validated" actually means here
-
-| Check | Result |
-|---|---|
-| Probability correlation (test set) | **0.99853** |
-| Test-set AUC | Identical to 4 decimals (0.7509 both) |
-| Max \|coefficient diff\| on the full 80-feature set | 0.298 |
-| Max \|coefficient diff\| on a smaller, low-collinearity 10-feature set | **0.004** |
-
-The coefficient-level gap on the full feature set is real and is **not a bug**, it's multicollinearity. Several of the top-ranked features are near-duplicates by construction (`EXT_SOURCE_MEAN`, `EXT_SOURCE_1_x_2`, `EXT_SOURCE_2_x_3`, `EXT_SOURCE_MIN/MAX` are all derived from the same 3 underlying columns). When inputs are this correlated, L2-regularized gradient descent and L-BFGS can converge to different points on a nearly-flat loss surface while producing almost identical predictions, which is exactly what the correlation and AUC numbers show. Re-running the same optimizer comparison on a smaller, deliberately low-collinearity feature set drops the max coefficient diff to 0.004, confirming the implementation itself is correct.
-
----
-
-## Feature engineering
-
-| Source | Features contributed | Method |
-|---|---:|---|
-| Application table | 20 | Anomaly flags (`DAYS_EMPLOYED` placeholder), age/tenure ratios, financial ratios, EXT_SOURCE aggregates and interactions, document/contact completeness |
-| Bureau + bureau balance | ~80 | Per-applicant aggregation (mean/max/min/sum) of credit-bureau records, active/overdue counts, credit-to-debt ratios |
-| Previous applications | ~90 | Refusal/approval rates, credit-to-application ratios, annuity ratios |
-| POS/cash balance | ~15 | Days-past-due rate, balance aggregates |
-| Credit card balance | ~40 | Utilization ratio, days-past-due rate, drawing aggregates |
-| Installments | ~35 | **Days-late and shortfall flags per installment**, actual repayment behaviour, not just what credit an applicant has |
-| **Total after joins** | **418 columns -> 400 numeric, top 80 selected by IV** | |
-
-Top features by Information Value (`output/feature_iv_ranking.csv`) are dominated by `EXT_SOURCE_*` (external bureau scores) and their interactions/aggregates, consistent with every public analysis of this dataset. Credit-card utilization and bureau debt ratios are the next tier.
-
-<img src="figs/iv_top20.png" width="500" alt="Top 20 features by Information Value">
-
----
-
-## Score band table
-
-LightGBM probabilities scaled to a 300-850-style score, calibrated to this population's actual base odds (~11.4:1 at an 8.07% test default rate, not an arbitrary prime-lending 50:1, which compressed the whole population into two bands when first tried):
-
-| Band | n | Default rate |
+| | This rebuild | Oracle |
 |---|---:|---:|
-| <520 | 29,357 | 11.53% |
-| 520-560 | 9,567 | 2.63% |
-| 560-600 | 5,147 | 1.40% |
-| 600-640 | 1,645 | 0.85% |
-| 640+ | 411 | 0.24% |
+| AUC | 0.7622 (val) | 0.7509 (test) |
+| KS | 0.394 | 0.377–0.381 |
+| Candidate features | 65 | 400 |
+| Categorical features used | 10 (WoE-encoded) | 0 (dropped, flagged as future work) |
+| Coefficient diff vs sklearn, clean feature set | 0.0028 | 0.004 |
 
-Clean monotonic separation: the score rank-orders risk well even though the underlying probabilities (per the calibration finding above) need work before being used directly.
+Not a controlled A/B — different splits, and the oracle went much deeper on
+relational feature engineering. The honest takeaway: a much smaller,
+independently-derived feature set reaches comparable discrimination, and
+using the categorical columns the oracle dropped picked up real signal
+(`OCCUPATION_TYPE` IV 0.083, `NAME_INCOME_TYPE` IV 0.056) for free.
 
-<img src="figs/lift_chart.png" width="500" alt="Lift chart by score decile">
+## The actual recommendation
 
----
+For a production credit decision, use logistic regression on WoE-encoded
+features over a black-box GBM (LightGBM in the oracle scores 0.7774 AUC but
+is badly miscalibrated — see the oracle's calibration-curve finding) —
+**not** because it's more accurate, it isn't, but because:
 
-## Repository structure
+- every declined applicant gets a specific, auditable reason (`reason_codes()`
+  in `src/scorecard.py`), which many jurisdictions require and which a GBM
+  makes materially harder to produce;
+- each WoE bin's monotonicity is checkable in a table before the model is
+  even fit, not just hoped for;
+- this scorecard outputs PD only — a full IFRS9 `ECL = PD x LGD x EAD`
+  provisioning number needs LGD and EAD models this rebuild doesn't attempt.
+
+## What's next, if extended
+
+- Calibrate the scorecard's base odds to this population's actual default
+  rate (~8%) instead of an assumed 20:1, the way the oracle does.
+- Out-of-time validation — everything here is a random split; Home Credit's
+  `DAYS_DECISION` field would support a real temporal holdout.
+- The Fraud Detection rebuild, same from-scratch method, is the natural next
+  cycle (see the 12-week plan).
+
+## Repository layout
 
 ```
-Credit_Risk/
 ├── src/
-│   ├── io_utils.py                       # Data loaders, dtype downcasting
-│   ├── feature_engineering_app.py        # Application-level features
-│   ├── feature_engineering_relational.py # Bureau/prev/POS/CC/installments aggregation
-│   ├── woe_iv.py                         # From-scratch WoE/IV
-│   ├── from_scratch_lr.py                # From-scratch logistic regression
-│   └── metrics.py                        # From-scratch AUC/GINI/KS/PSI/Brier/calibration
-├── run_pipeline.py                       # End-to-end runner (~7 min on this machine)
-├── make_figs.py                          # Regenerates figs/ from output/ artifacts
-├── build_notebook.py                     # Generates Credit_Risk_Scorecard.ipynb (edit this, not the notebook)
-├── export_demo_samples.py                # Exports output/demo_applicants.json for the live case-study site
-├── Credit_Risk_Scorecard.ipynb           # Narrated version of the same pipeline, executed end-to-end
-├── output/                               # results.json, predictions.npz, feature_iv_ranking.csv, score_band_table.csv, demo_applicants.json
-├── figs/                                 # iv_top20, score_distribution, calibration_curve, lift_chart (all regenerated from real output)
-├── data/                                 # gitignored, Kaggle dataset
-├── SCHEMA.md                             # Table schemas and known data quirks
-├── SETUP.md                              # Step-by-step run instructions
-└── requirements.txt
+│   ├── io_raw.py                # application table loader
+│   ├── baseline_features.py     # Week 6 application-level features
+│   ├── baseline_model.py        # Week 6 naive LR baseline
+│   ├── woe_iv.py                # Week 7 — WoE/IV from scratch
+│   ├── metrics_scratch.py       # Week 7 — AUC/GINI/KS/PSI from scratch
+│   ├── from_scratch_lr.py       # Week 7 — logistic regression via gradient descent
+│   ├── week7_run.py             # Week 7 — WoE + from-scratch LR on real data
+│   ├── relational_features.py   # Week 8 — bureau/prev/POS/CC/installments aggregation
+│   ├── week8_run.py             # Week 8 — full feature set + collinearity diagnosis
+│   ├── scorecard.py             # Week 8 — PDO scorecard + reason codes
+│   └── week8_full.py            # Week 8 — scorecard build + example applicants
+├── notes/                       # week6-9 logs — the actual decision record
+└── CLAUDE.md                    # the rules this rebuild followed
 ```
 
-**Note on the notebook:** `Credit_Risk_Scorecard.ipynb` is generated by `build_notebook.py`, not hand-edited, and calls the exact same `src/` modules as `run_pipeline.py` (no re-implementation, no restated numbers), so its output is guaranteed to match `output/results.json`. It replaces two earlier narrated drafts that predated this rebuild, were never executed, and described the Lending Club dataset rather than Home Credit, exactly the kind of stale, unexecuted work this README opens with a warning about. Those old drafts are not in this repo.
+## Getting the data
 
-## How to run
+Place the 8 Home Credit CSVs in `data/` (gitignored, not shipped in this repo):
+[Home Credit Default Risk (Kaggle)](https://www.kaggle.com/competitions/home-credit-default-risk).
+`data/` needs: `application_train.csv`, `application_test.csv`, `bureau.csv`,
+`bureau_balance.csv`, `previous_application.csv`, `POS_CASH_balance.csv`,
+`credit_card_balance.csv`, `installments_payments.csv`.
+
+## Running it
 
 ```bash
-pip install -r requirements.txt
-
-# Data: place the 8 Home Credit CSVs in data/ (see SCHEMA.md)
-# Get it from https://www.kaggle.com/competitions/home-credit-default-risk
-
-python run_pipeline.py
-python make_figs.py            # regenerates figs/ from the output/ this run just wrote
-python export_demo_samples.py  # regenerates output/demo_applicants.json for the live site
-
-# Notebook (edit build_notebook.py, never the .ipynb directly):
-python build_notebook.py
-jupyter nbconvert --to notebook --execute Credit_Risk_Scorecard.ipynb \
-  --output Credit_Risk_Scorecard.ipynb --ExecutePreprocessor.timeout=600
+cd src
+python baseline_model.py    # Week 6
+python week7_run.py         # Week 7
+python relational_features.py  # Week 8, first run only (caches to a local parquet)
+python week8_full.py        # Week 8
 ```
-
-Takes ~7 minutes on a laptop (most of it is loading and aggregating the 13.6M-row installments table and the other large relational tables).
-
-## What's next
-
-1. **Isotonic-calibrate LightGBM** before its probabilities feed into any expected-loss calculation.
-2. **Out-of-time validation**: this run uses a random stratified split; Home Credit's `DAYS_DECISION` field would support a real temporal holdout.
-3. **Categorical features**: the current pipeline uses only the 400 numeric columns; the ~18 categorical columns (occupation type, income type, etc.) are dropped, not encoded.
-4. From-scratch decision tree / GBM, if the from-scratch angle is worth extending beyond LR + WoE/IV.
