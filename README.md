@@ -15,6 +15,14 @@ goal than a bigger AUC number: can this get scored, and can it explain
 *why*, in language a credit committee and a hiring manager would both
 accept?
 
+`figs/` and `output/demo_applicants.json` are kept from the earlier version
+on purpose too — the live demo at
+[credit-risk-alven.vercel.app](https://credit-risk-alven.vercel.app) fetches
+both directly from this repo's `master` branch at runtime, so removing them
+would have quietly broken a working, deployed page. Everything else in this
+README describes the new rebuild; those two paths are the one deliberate
+exception.
+
 ## The business question
 
 Home Credit's application data (307,511 applicants, 8 relational tables)
