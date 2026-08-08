@@ -3,3 +3,6 @@ numpy>=1.24
 scikit-learn>=1.3
 scipy>=1.10
 pyarrow>=14.0
+jupyter>=1.0
+nbconvert>=7.0
+nbformat>=5.0
