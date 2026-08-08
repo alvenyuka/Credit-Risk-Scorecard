@@ -29,10 +29,14 @@ MISSING_LABEL = "Missing"
 
 
 def fit_continuous_bins(x: pd.Series, n_bins: int = 10) -> np.ndarray:
-    finite = x.dropna()
-    edges = np.unique(np.quantile(finite, np.linspace(0, 1, n_bins + 1)))
+    # always float64: a low-cardinality integer column (e.g. a 0/1 flag) can
+    # make np.quantile / np.array return an int array, and an int array
+    # can't hold -inf, which crashed here on DAYS_EMPLOYED_ANOM the first
+    # time this ran end to end.
+    finite = x.dropna().astype(float)
+    edges = np.unique(np.quantile(finite, np.linspace(0, 1, n_bins + 1))).astype(float)
     if len(edges) < 3:
-        edges = np.array([finite.min(), finite.max()])
+        edges = np.array([finite.min(), finite.max()], dtype=float)
     edges[0] = -np.inf
     edges[-1] = np.inf
     return edges
