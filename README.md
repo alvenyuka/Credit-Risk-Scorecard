@@ -89,6 +89,13 @@ population. Calibrating it to this dataset's real 8% default rate would be
 the first fix. Second would be an actual out-of-time validation split
 instead of a random one.
 
+## Known Limitations
+
+- **Base odds aren't calibrated to this population.** 20 good borrowers per bad one at a score of 600 is a reasonable default, not fit to this dataset's actual ~8% default rate (see "If I extended this" above).
+- **Validation split is random, not out-of-time.** A regulator-facing scorecard should be validated on a forward time split; this one wasn't.
+- **PD only, not a full IFRS 9 loss estimate.** This scorecard outputs a probability of default; loss given default and exposure at default are separate models not built here.
+- **The rebuild-vs-old-pipeline comparison in Results isn't a controlled benchmark** — different train/test splits, not an apples-to-apples A/B.
+
 ## Repository layout
 
 ```
