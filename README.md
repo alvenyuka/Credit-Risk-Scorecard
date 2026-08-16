@@ -118,3 +118,15 @@ python build_notebook.py
 jupyter nbconvert --to notebook --execute Credit_Risk_Scorecard.ipynb \
   --output Credit_Risk_Scorecard.ipynb --ExecutePreprocessor.timeout=900
 ```
+
+## License
+
+MIT — see [`LICENSE`](LICENSE).
+
+## Credits
+
+Author: **Alven Yuka** — CPA Finalist (Kenya). Built on the [Home Credit Default Risk](https://www.kaggle.com/competitions/home-credit-default-risk) dataset (Kaggle).
+
+## Connect
+
+📫 [alvenyuka2@gmail.com](mailto:alvenyuka2@gmail.com) · 💼 [LinkedIn](https://www.linkedin.com/in/alven-yuka-610b78174/) · 🐙 [GitHub](https://github.com/alvenyuka)
