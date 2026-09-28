@@ -1,10 +1,11 @@
 """
 Week 6 blind rebuild, step 1: load the raw application table.
 
-Deliberately NOT reading Credit_Risk/src/io_utils.py before writing this. The only
-things looked at were the raw CSV header and the 8-table README description from
-the original plan conversation (bureau, bureau_balance, previous_application,
-POS_CASH_balance, credit_card_balance, installments_payments, application_train/test).
+Deliberately written without opening the previous pipeline's loader, which is in
+this repo's git history. The only things looked at were the raw CSV header and
+Kaggle's own description of the 8 tables (bureau, bureau_balance,
+previous_application, POS_CASH_balance, credit_card_balance,
+installments_payments, application_train/test).
 """
 from pathlib import Path
 import pandas as pd

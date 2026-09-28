@@ -2,13 +2,23 @@
 Week 8, full feature set: application plus relational aggregations, WoE-encoded,
 IV-ranked, fit with both sklearn and the from-scratch LR. The point this week
 isn't a higher AUC, it's deliberately reproducing and diagnosing the
-sklearn-vs-scratch coefficient divergence documented in the oracle's known
-limitations -- expected to show up here because several relational features
-are near-duplicates of each other by construction (mean vs max of the same
-underlying series, DPD across POS/CC/installments all describing the same
-"did they pay late" behavior from different tables).
+sklearn-vs-scratch coefficient divergence the previous pipeline hit (it is in
+this repo's git history), expected to show up here because several relational
+features are near-duplicates of each other by construction: DPD across
+POS/CC/installments all describe the same "did they pay late" behavior from
+different tables.
 
-IV threshold is intentionally lower than Week 7's (0.01 instead of 0.02) --
+One caveat on that diagnosis, added after checking it rather than assuming it.
+The most correlated WoE pair in the run, BUREAU_OVERDUE_MAX against
+BUREAU_OVERDUE_MEAN at r = +1.000, is not mean-versus-max redundancy. Both
+columns are zero for the great majority of applicants, so the decile edges
+dedupe down to the same single non-zero cut, both collapse to the same two-bin
+split, and their IVs come out identical to six decimal places (0.011698). The
+r = 1.000 is an artifact of the binner, not of the feature definitions. See
+fit_continuous_bins in woe_iv.py and the Known Limitations section of the
+README.
+
+IV threshold is intentionally lower than Week 7's (0.01 instead of 0.02):
 keeping more, more-correlated features is the point this week, not curating
 them away.
 """
@@ -137,6 +147,8 @@ def main():
 
     return {
         "kept_cols": kept_cols,
+        "n_candidate_features": len(woe_fits),
+        "n_categorical_features": len(cat_cols),
         "woe_fits": woe_fits,
         "corr_pairs": pairs[:10],
         "coef_diff_max": float(coef_diff.max()),

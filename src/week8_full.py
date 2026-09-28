@@ -60,6 +60,8 @@ def main():
             "pred_corr_vs_sklearn": result["pred_corr"],
             "coef_diff_max_vs_sklearn": result["coef_diff_max"],
             "n_features_kept": len(result["kept_cols"]),
+            "n_candidate_features": result["n_candidate_features"],
+            "n_categorical_features": result["n_categorical_features"],
             "n_validation_rows": int(len(y_val)),
             "point_biserial_score_vs_default": float(corr),
             "score_min": float(scores.min()),

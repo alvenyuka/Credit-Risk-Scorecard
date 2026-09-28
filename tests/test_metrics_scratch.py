@@ -6,7 +6,12 @@ against the library implementation it is supposed to reproduce:
 
   auc_rank_sum -> sklearn.metrics.roc_auc_score
   ks_statistic -> scipy.stats.ks_2samp
-  gini, psi    -> their own definitions
+  gini         -> 2 * sklearn.metrics.roc_auc_score - 1
+  psi          -> its own definition
+
+The gini test deliberately goes through sklearn rather than through this
+module's own auc_rank_sum. Comparing gini(y, s) against 2 * auc_rank_sum(y, s)
+- 1 restates the function body and cannot fail for any implementation.
 
 test_ks_handles_heavy_ties is a regression test for a real bug found during the
 rebuild: computing the cumulative gap row-by-row after a plain sort evaluates it
@@ -54,9 +59,10 @@ def test_auc_perfect_and_inverted_separators():
     assert auc_rank_sum(y, np.array([6.0, 5, 4, 3, 2, 1])) == pytest.approx(0.0)
 
 
-def test_gini_is_two_auc_minus_one(scores_and_labels):
+def test_gini_matches_sklearn_auc(scores_and_labels):
+    """The credit-scoring GINI, 2*AUC-1, against sklearn's AUC as the oracle."""
     y, score = scores_and_labels
-    assert gini(y, score) == pytest.approx(2 * auc_rank_sum(y, score) - 1, abs=1e-12)
+    assert gini(y, score) == pytest.approx(2 * roc_auc_score(y, score) - 1, abs=1e-12)
 
 
 def test_ks_matches_scipy_two_sample(scores_and_labels):
