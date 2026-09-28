@@ -1,7 +1,7 @@
 """
-Week 6 — blind rebuild, step 2: baseline feature engineering.
+Week 6 blind rebuild, step 2: baseline feature engineering.
 
-Own design, application-table only (no bureau/previous_application/etc. yet —
+Own design, application-table only (no bureau/previous_application/etc. yet;
 that's relational aggregation, out of scope for a first naive baseline).
 
 Feature choices and why (this is the decision log for this step):
@@ -9,7 +9,7 @@ Feature choices and why (this is the decision log for this step):
   before the application). Converting to positive years reads more naturally
   for a first pass.
 - DAYS_EMPLOYED has a well-known placeholder value (365243) used for
-  pensioners/unemployed applicants who have no employment history — that's
+  pensioners/unemployed applicants who have no employment history. That is
   ~365,243 days ~= 1000 years, clearly not real. Flagging it as an anomaly
   and setting it to NaN rather than silently averaging it into "years employed"
   matters: leaving it in would make retirees look like they'd been employed

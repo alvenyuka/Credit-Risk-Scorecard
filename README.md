@@ -6,21 +6,73 @@
 [![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)](#tech-stack)
 [![scikit-learn](https://img.shields.io/badge/scikit--learn-F7931E?style=flat&logo=scikit-learn&logoColor=white)](#tech-stack)
 [![AUC](https://img.shields.io/badge/AUC-0.762-success)](#results)
+[![tests](https://github.com/alvenyuka/Credit-Risk-Scorecard/actions/workflows/ci.yml/badge.svg)](https://github.com/alvenyuka/Credit-Risk-Scorecard/actions/workflows/ci.yml)
 
 A credit scorecard for Home Credit's loan applicants, built from Weight of
 Evidence, a from-scratch logistic regression, and a points-based scorecard
-a loan officer could actually read.
+a loan officer can read.
 
 Start with [`Credit_Risk_Scorecard.ipynb`](Credit_Risk_Scorecard.ipynb). It runs
 the full 307,511-applicant dataset end to end, and keeps the working notes
 and dead ends in rather than tidying them out afterward.
+
+## Why?
+
+A credit model that declines someone often has to say why. Under the US Equal
+Credit Opportunity Act that reason has to be specific, and the EU AI Act treats
+credit scoring as high risk, which puts the same pressure on documentation and
+explainability. A gradient-boosted model would likely score higher than what is
+here and could not answer that question directly.
+
+So this is a scorecard: Weight of Evidence bins, a logistic regression over them,
+and a points table where every bin contributes a fixed number of points. A
+declined applicant's biggest losses come back as "lost 18 points on employment
+history" rather than a probability with no account of itself. Each bin's
+direction can be read off a table before the model is trained, and the point
+values move only a little when it is refitted, which matters when a regulator
+expects similar applicants treated consistently over time.
+
+The second reason is that the statistics are written out rather than imported.
+Weight of Evidence, Information Value, the logistic regression solver, and
+AUC, GINI, KS and PSI are all built here and then checked against scikit-learn
+and scipy. One of those checks failed the first time, which is the part worth
+reading.
+
+## Project Structure
+
+```
+Credit_Risk_Scorecard.ipynb   the notebook, run end to end
+build_notebook.py             generates the notebook, edit this not the .ipynb
+src/
+  io_raw.py                   loads the application table
+  baseline_features.py        application-level features
+  baseline_model.py           the naive baseline
+  woe_iv.py                   Weight of Evidence / Information Value
+  metrics_scratch.py          AUC, GINI, KS, PSI
+  from_scratch_lr.py          logistic regression by gradient descent
+  relational_features.py      bureau / previous application / payment history
+  scorecard.py                the points scorecard and reason codes
+  results_io.py               writes outputs/results.json; the README quotes it
+  week7_run.py                primitives validated against sklearn / scipy
+  week8_run.py                full feature set, model, metrics
+  week8_full.py               builds the scorecard, writes results.json
+tests/
+  test_metrics_scratch.py     AUC/GINI/KS/PSI vs sklearn and scipy
+  test_from_scratch_lr.py     the solver vs sklearn, incl. class_weight
+conftest.py                   puts src/ on sys.path so tests import it the way the scripts do
+pytest.ini
+outputs/
+  results.json                every headline number, written by the code
+figs/                         the charts shown above
+.github/workflows/ci.yml      runs the tests on every push
+```
 
 ## Quick Start
 
 1. Download the 8 CSVs from Home Credit Default Risk on Kaggle (see "Dataset" below) and put them in `data/`.
 2. `pip install -r requirements.txt`
 3. `python build_notebook.py`, then execute the generated notebook end to end (full commands under "Running it" below).
-4. Read "What's in the notebook" below for the narrative, or jump to Results for the headline numbers.
+4. Read "Methodology" below for the narrative, or jump to Results for the headline numbers.
 
 ## Features
 
@@ -38,11 +90,30 @@ and dead ends in rather than tidying them out afterward.
 | Core logic | From-scratch WoE/IV, logistic regression (gradient descent), AUC/GINI/KS/PSI |
 | Notebook | Jupyter, nbconvert |
 
+## Dataset
+
+Download the 8 CSVs from [Home Credit Default Risk on Kaggle](https://www.kaggle.com/competitions/home-credit-default-risk)
+and put them in `data/` (not shipped in this repo).
+
+## Running it
+
+```bash
+pip install -r requirements.txt
+
+# the pipeline, against the 8 tables in data/. ~7 minutes.
+# writes outputs/results.json, which the Results section above quotes.
+python src/week8_full.py
+
+# the notebook
+python build_notebook.py
+jupyter nbconvert --to notebook --execute Credit_Risk_Scorecard.ipynb \
+  --output Credit_Risk_Scorecard.ipynb --ExecutePreprocessor.timeout=900
+```
+
 ## Why this version of the repo looks different
 
 This used to be a bigger pipeline: 400 candidate features, a LightGBM
-benchmark, calibration figures, a live demo site. That work was real and I
-verified it end to end at the time. I replaced it with this rebuild on
+benchmark, calibration figures, a live demo site. I verified that work end to end at the time. I replaced it with this rebuild on
 purpose. I wanted to see if I could get to a working scorecard again on my
 own, without opening the old code, and be honest in the notebook about what
 went wrong along the way instead of only showing the finished version. The
@@ -54,7 +125,7 @@ Two things from the old version are still here deliberately: `figs/` and
 both straight from this repo, so removing them would have quietly broken a
 page that still works. Everything else described below is the new build.
 
-## What's in the notebook
+## Methodology
 
 I started with just the loan application form and a naive logistic
 regression, to see how far that alone would get me (0.75 AUC, a floor to
@@ -63,7 +134,7 @@ credit-scoring metrics (AUC, GINI, KS, PSI) from scratch instead of
 importing them, and checked every one against scikit-learn and scipy before
 trusting it. One of those checks failed the first time: my KS statistic was
 off under tied scores because I was checking the good/bad gap in the middle
-of a tied block instead of at a real threshold. Fixed it, and it matched
+of a tied block instead of at a threshold that exists in the data. Fixed it, and it matched
 exactly.
 
 After that I added bureau history and previous-application data, which
@@ -72,7 +143,7 @@ becomes a specific score contribution, so a declined applicant's biggest
 point losses are things like "lost 18 points on employment history," not a
 number with no explanation attached.
 
-I also caught a mistake in my own comparison. I thought I'd found real
+I also caught a mistake in my own comparison. I thought I'd found
 model instability from correlated features (my from-scratch model and
 scikit-learn's only agreed on 90% of predictions), when the actual problem
 was that scikit-learn was using `class_weight="balanced"` and my own
@@ -82,20 +153,65 @@ disagreement meant something.
 
 ## Results
 
+Every number here is read from [`outputs/results.json`](outputs/results.json),
+which `src/week8_full.py` writes at the end of a run. Nothing in this section is
+typed in by hand, so the README cannot drift away from what the code produced.
+That file also records the commit, the package versions, whether the data was
+real or synthetic, and the validation row count, so any figure below can be
+checked rather than taken on trust.
+
 | | This rebuild | Old pipeline |
 |---|---:|---:|
-| AUC | 0.762 | 0.751 |
-| KS | 0.394 | 0.377 to 0.381 |
+| AUC | 0.7622 | 0.751 |
+| KS | 0.3940 | 0.377 to 0.381 |
+| GINI | 0.5244 | not reported |
+| Prediction correlation vs scikit-learn | 0.999997 | 0.9985 |
+| Max coefficient difference vs scikit-learn | 0.0031 | 0.298 |
+| Features kept after selection | 56 | 80 |
 | Candidate features | 65 | 400 |
 | Categorical features used | 10 | 0 |
+
+Validation set: 61,503 applicants, a holdout split rather than the Kaggle test
+set, so these are not leaderboard scores.
 
 Not a fair head-to-head. Different train/test splits, and the old pipeline
 did a lot more relational feature engineering than I redid here. What I
 take from it: a much smaller, independently built feature set gets
 comparable results, and the categorical columns the old pipeline dropped
-(occupation type, income type) turned out to carry real signal.
+(occupation type, income type) turned out to carry signal.
 
-## What I'd actually recommend
+The coefficient difference is the interesting column. On this 56-feature set the
+from-scratch solver lands within 0.0031 of scikit-learn; the old pipeline's
+80-feature set diverged by 0.298. That gap is not a better solver, it is less
+redundancy in the feature set: the old version selected four engineered variants
+of the same three `EXT_SOURCE` columns, and near-duplicate predictors make
+coefficients unstable without hurting predictions. Same reason its predictions
+still correlated at 0.9985.
+
+### Information value of the selected features
+
+![Top 20 features by information value](figs/iv_top20.png)
+
+### Is the model calibrated, and does it separate?
+
+![Calibration curve](figs/calibration_curve.png)
+
+![Lift chart](figs/lift_chart.png)
+
+Calibration matters more than AUC for a scorecard. A model that ranks well but
+reports the wrong probability produces the right ordering and the wrong
+provision.
+
+### Score distribution
+
+![Score distribution](figs/score_distribution.png)
+
+Mean score 455.6 for applicants who repaid, 399.5 for those who defaulted, on a
+scale running 300 to 656. The point-biserial correlation between score and
+default is -0.263: higher score, lower risk, which is the direction a scorecard
+has to have before anything else about it matters.
+
+## What I'd recommend
 
 Logistic regression on Weight of Evidence features, not a gradient-boosted
 model, even though the tree model would probably score higher. A declined
@@ -125,35 +241,33 @@ instead of a random one.
 - **PD only, not a full IFRS 9 loss estimate.** This scorecard outputs a probability of default; loss given default and exposure at default are separate models not built here.
 - **The rebuild-vs-old-pipeline comparison in Results isn't a controlled benchmark**: different train/test splits, not an apples-to-apples A/B.
 
-## Project Structure
-
-```
-Credit_Risk_Scorecard.ipynb   the notebook, run end to end
-build_notebook.py             generates the notebook, edit this not the .ipynb
-src/
-  io_raw.py                   loads the application table
-  baseline_features.py        application-level features
-  baseline_model.py           the naive baseline
-  woe_iv.py                   Weight of Evidence / Information Value
-  metrics_scratch.py          AUC, GINI, KS, PSI
-  from_scratch_lr.py          logistic regression by gradient descent
-  relational_features.py      bureau / previous application / payment history
-  scorecard.py                the points scorecard and reason codes
-```
-
-## Dataset
-
-Download the 8 CSVs from [Home Credit Default Risk on Kaggle](https://www.kaggle.com/competitions/home-credit-default-risk)
-and put them in `data/` (not shipped in this repo).
-
-## Running it
+## Tests
 
 ```bash
-pip install -r requirements.txt
-python build_notebook.py
-jupyter nbconvert --to notebook --execute Credit_Risk_Scorecard.ipynb \
-  --output Credit_Risk_Scorecard.ipynb --ExecutePreprocessor.timeout=900
+python -m pytest        # 18 tests, about 8 seconds
 ```
+
+The from-scratch implementations are the whole point of this repo, so they are
+tested rather than asserted. Every test runs on small synthetic data with a fixed
+seed and checks the hand-written version against the library it is supposed to
+reproduce: `auc_rank_sum` against `sklearn.metrics.roc_auc_score`, `ks_statistic`
+against `scipy.stats.ks_2samp`, and the gradient-descent logistic regression
+against `sklearn.linear_model.LogisticRegression`.
+
+Two of them exist because of bugs this rebuild hit:
+
+- **`test_ks_handles_heavy_ties`.** Computing the cumulative gap row by row after
+  a plain sort evaluates it partway through a block of tied scores, at points
+  that do not exist in the empirical CDF, which produces a spurious maximum. The
+  bug is invisible on continuous scores and appears the moment scores are
+  bucketed, which is exactly what a scorecard does.
+- **`test_balanced_matches_sklearn_balanced`.** An earlier version of the
+  comparison harness compared a weighted fit against an unweighted sklearn fit,
+  which is comparing two different objectives rather than two solvers of the same
+  problem.
+
+Because the tests use synthetic data, CI can run them without the 2.5 GB dataset.
+The full pipeline run against the real data stays a local step.
 
 ## Roadmap
 

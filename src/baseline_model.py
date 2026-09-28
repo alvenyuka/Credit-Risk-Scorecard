@@ -1,5 +1,5 @@
 """
-Week 6 — blind rebuild, step 3: naive sklearn logistic regression baseline.
+Week 6 blind rebuild, step 3: naive sklearn logistic regression baseline.
 
 Goal here isn't a good model -- it's a correct, honest number to improve on
 in Week 7 once WoE/IV replaces this crude impute+scale+one-hot pipeline.

@@ -1,5 +1,5 @@
 """
-Week 7 — Weight of Evidence / Information Value, from scratch.
+Week 7: Weight of Evidence and Information Value, from scratch.
 
 Convention used (the standard credit-scoring one):
     WoE_bin = ln( dist_good_bin / dist_bad_bin )
@@ -8,14 +8,14 @@ where dist_good_bin = (# non-defaults in bin) / (total non-defaults),
 
 A positive WoE means a bin is safer than average (over-represented among
 goods); negative means riskier. IV is the WoE-weighted gap between the two
-distributions, summed across bins — a standard predictive-power score:
+distributions, summed across bins, a standard predictive-power score:
   <0.02 useless, 0.02-0.1 weak, 0.1-0.3 medium, 0.3-0.5 strong, >0.5 suspicious
-  (often a leak) — that last bucket is a genuinely useful red flag, not just
+  (often a leak). That last bucket is a useful red flag, not just
   a good score.
 
 Binning is fit once on train (quantile edges for numeric columns, the raw
-category set for categorical ones) and then *applied* to any other split —
-computing fresh quantiles per split would leak information about that split's
+category set for categorical ones) and then *applied* to any other split.
+Computing fresh quantiles per split would leak information about that split's
 own label distribution into its own bins.
 
 Zero-count bins would send WoE to +/-inf (log of 0). Laplace-style smoothing

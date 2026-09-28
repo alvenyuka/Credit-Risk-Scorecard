@@ -6,3 +6,4 @@ pyarrow>=14.0
 jupyter>=1.0
 nbconvert>=7.0
 nbformat>=5.0
+pytest>=8.0

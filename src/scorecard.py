@@ -1,5 +1,5 @@
 """
-Week 8 — PDO (points-to-double-odds) scorecard, from scratch.
+Week 8: PDO (points-to-double-odds) scorecard, from scratch.
 
 The scorecard formula turns a logistic regression's log-odds into a points
 scale a loan officer can hand-apply without touching a model:

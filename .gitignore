@@ -4,3 +4,7 @@ __pycache__/
 *.pyc
 .ipynb_checkpoints/
 *.parquet
+
+# Local pipeline run artefacts. outputs/results.json IS committed -- it is the
+# single source of every number the README quotes -- but the run log is not.
+outputs_run.log

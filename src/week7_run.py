@@ -1,5 +1,5 @@
 """
-Week 7 — put it together: WoE-encode the Week 6 feature set, rank by IV,
+Week 7, putting it together: WoE-encode the Week 6 feature set, rank by IV,
 fit the from-scratch logistic regression on the WoE-encoded features, and
 report AUC/GINI/KS/PSI using the hand-coded metrics module. Cross-checked
 against an sklearn LogisticRegression fit on the identical WoE features (not

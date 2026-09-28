@@ -1,5 +1,5 @@
 """
-Week 8 — full feature set: application + relational aggregations, WoE-encoded,
+Week 8, full feature set: application plus relational aggregations, WoE-encoded,
 IV-ranked, fit with both sklearn and the from-scratch LR. The point this week
 isn't a higher AUC, it's deliberately reproducing and diagnosing the
 sklearn-vs-scratch coefficient divergence documented in the oracle's known

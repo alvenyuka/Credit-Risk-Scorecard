@@ -1,5 +1,5 @@
 """
-Week 7 — AUC, GINI, KS, PSI, all from scratch.
+Week 7: AUC, GINI, KS, PSI, all from scratch.
 
 AUC via the rank-sum (Mann-Whitney U) identity instead of numerically
 integrating the ROC curve:

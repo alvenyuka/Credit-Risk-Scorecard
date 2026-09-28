@@ -1,0 +1,29 @@
+{
+  "generated_at_utc": "2026-09-28T00:20:01+00:00",
+  "git_commit": "22777c3",
+  "data_source": "real",
+  "python": "3.13.9",
+  "packages": {
+    "numpy": "2.4.6",
+    "pandas": "3.0.3",
+    "scikit-learn": "1.8.0",
+    "scipy": "1.17.1"
+  },
+  "metrics": {
+    "val_auc": 0.7622013117611244,
+    "val_ks": 0.39396207496837404,
+    "val_gini": 0.5244026235222488,
+    "pred_corr_vs_sklearn": 0.9999973352848605,
+    "coef_diff_max_vs_sklearn": 0.0031049834553395494,
+    "n_features_kept": 56,
+    "n_validation_rows": 61503,
+    "point_biserial_score_vs_default": -0.26256664535605545,
+    "score_min": 300.0,
+    "score_max": 656.2519827120926,
+    "mean_score_repaid": 455.61567284286593,
+    "mean_score_defaulted": 399.50393087815104,
+    "scorecard_base_points": 427.44133663983774,
+    "scorecard_factor": 57.70780163555854
+  },
+  "notes": "Home Credit Default Risk, 8 relational tables. Validation is a holdout split, not the Kaggle test set, so these figures are not leaderboard scores. coef_diff_max_vs_sklearn is expected to be larger on the full selected feature set than on a small clean one; that is multicollinearity among near-duplicate selected features, not a solver defect."
+}

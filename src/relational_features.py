@@ -1,5 +1,5 @@
 """
-Week 8 — relational aggregation, own design, from scratch.
+Week 8: relational aggregation, own design, from scratch.
 
 Everything below rolls a table keyed at a finer grain (per bureau record,
 per previous application, per monthly balance snapshot) up to one row per

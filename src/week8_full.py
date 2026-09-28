@@ -6,6 +6,7 @@ codes for a couple of real applicants, not just a validation-set AUC number.
 import numpy as np
 
 import week8_run
+from results_io import write_results
 from scorecard import build_scorecard, destandardize_coefficients, reason_codes, score_dataframe
 
 
@@ -48,6 +49,36 @@ def main():
         print(f"\n{label} (score={s:.0f}):")
         for col, pts in reason_codes(row, sc, top_n=3):
             print(f"  {col:28s} {pts:+.1f} points")
+
+    # Every number the README quotes is written here by the code that computed
+    # it, never transcribed by hand. See src/results_io.py for why.
+    path = write_results(
+        {
+            "val_auc": result["val_auc"],
+            "val_ks": result["val_ks"],
+            "val_gini": 2 * result["val_auc"] - 1,
+            "pred_corr_vs_sklearn": result["pred_corr"],
+            "coef_diff_max_vs_sklearn": result["coef_diff_max"],
+            "n_features_kept": len(result["kept_cols"]),
+            "n_validation_rows": int(len(y_val)),
+            "point_biserial_score_vs_default": float(corr),
+            "score_min": float(scores.min()),
+            "score_max": float(scores.max()),
+            "mean_score_repaid": float(scores[y_val == 0].mean()),
+            "mean_score_defaulted": float(scores[y_val == 1].mean()),
+            "scorecard_base_points": float(sc["base_points"]),
+            "scorecard_factor": float(sc["factor"]),
+        },
+        data_source="real",
+        notes=(
+            "Home Credit Default Risk, 8 relational tables. Validation is a holdout "
+            "split, not the Kaggle test set, so these figures are not leaderboard "
+            "scores. coef_diff_max_vs_sklearn is expected to be larger on the full "
+            "selected feature set than on a small clean one; that is multicollinearity "
+            "among near-duplicate selected features, not a solver defect."
+        ),
+    )
+    print(f"\nwrote {path}")
 
     return sc, scores
 

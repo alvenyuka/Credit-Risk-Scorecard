@@ -1,5 +1,5 @@
 """
-Week 7 — logistic regression via batch gradient descent, from scratch.
+Week 7: logistic regression via batch gradient descent, from scratch.
 
 L2-regularized cross-entropy, intercept excluded from the penalty (standard
 practice -- there's no reason to shrink the baseline log-odds toward zero,

@@ -1,0 +1,39 @@
+name: tests
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      # The Home Credit dataset is 2.5 GB and gitignored, so CI cannot use it.
+      # Every test in tests/ runs on small synthetic data generated with a fixed
+      # seed and checks the from-scratch implementations against sklearn and
+      # scipy. That is deliberate: these tests verify the solver and the metric
+      # formulas, which is what can break silently. The full pipeline run against
+      # the real data is a local step (python src/week8_full.py) and is what
+      # writes outputs/results.json.
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy pandas scikit-learn scipy pytest
+
+      - name: Run tests
+        run: python -m pytest -q
