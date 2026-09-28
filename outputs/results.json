@@ -1,6 +1,6 @@
 {
   "generated_at_utc": "2026-09-28T00:20:01+00:00",
-  "git_commit": "22777c3",
+  "git_commit": "b2a0ac6",
   "data_source": "real",
   "python": "3.13.9",
   "packages": {
@@ -25,5 +25,6 @@
     "scorecard_base_points": 427.44133663983774,
     "scorecard_factor": 57.70780163555854
   },
-  "notes": "Home Credit Default Risk, 8 relational tables. Validation is a holdout split, not the Kaggle test set, so these figures are not leaderboard scores. coef_diff_max_vs_sklearn is expected to be larger on the full selected feature set than on a small clean one; that is multicollinearity among near-duplicate selected features, not a solver defect."
+  "notes": "Home Credit Default Risk, 8 relational tables. Validation is a holdout split, not the Kaggle test set, so these figures are not leaderboard scores. coef_diff_max_vs_sklearn is expected to be larger on the full selected feature set than on a small clean one; that is multicollinearity among near-duplicate selected features, not a solver defect.",
+  "git_commit_note": "Recorded as 22777c3 by the run that produced these metrics. The repository history was later rewritten; b2a0ac6 is that same commit, carrying a byte-identical tree, under its new hash."
 }

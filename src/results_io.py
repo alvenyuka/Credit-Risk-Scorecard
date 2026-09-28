@@ -12,8 +12,8 @@ The rule that goes with it: the README quotes this file, and nothing else. If a
 number is not in here, it does not belong in the README.
 
 Provenance is recorded alongside the metrics deliberately. "val AUC 0.7622" on
-its own is unfalsifiable. "val AUC 0.7622, from commit 22777c3, real data,
-61,502 validation rows, numpy 2.x, on this date" can be checked.
+its own is unfalsifiable. "val AUC 0.7622, from commit b2a0ac6, real data,
+61,503 validation rows, numpy 2.x, on this date" can be checked.
 """
 from __future__ import annotations
 
