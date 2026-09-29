@@ -349,5 +349,5 @@ MIT. See [`LICENSE`](../LICENSE).
 
 ## Credits
 
-Author: **Alven Yuka**, CPA Finalist (Kenya). Built on the [Home Credit Default Risk](https://www.kaggle.com/competitions/home-credit-default-risk) dataset (Kaggle).
+Author: **Alven Yuka**, CPA Finalist. Built on the [Home Credit Default Risk](https://www.kaggle.com/competitions/home-credit-default-risk) dataset (Kaggle).
 
