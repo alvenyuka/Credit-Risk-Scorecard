@@ -202,10 +202,10 @@ than being folded into the claim above. **Candidate features (65)** and
 **categorical features (11)** are the lengths of the feature lists in
 `src/week8_run.py`, not metrics of the run; the next run records them in
 `results.json` as well. The whole **Old pipeline** column is read from the
-pre-rebuild README and `BUILD_STATUS.md` at commit `979e39c~1`, which is in this
+pre-rebuild README and `BUILD_STATUS.md` at commit `a8708a0~1`, which is in this
 repo's git history.
 
-`results.json` records `git_commit: b2a0ac6`, which is behind HEAD. The commits
+`results.json` records `git_commit: d74c298`, which is behind HEAD. The commits
 since it touched only the README and the tests, not `src/`, so the figures still
 describe the code that is here.
 
