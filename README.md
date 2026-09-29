@@ -27,6 +27,11 @@ example "lost 18 points on employment history".
 | GINI | 0.5244 |
 | Average score, applicants who repaid vs defaulted (scale 300 to 656) | 455.6 vs 399.5 |
 
+- **The score separates risk sharply.** Applicants in the lowest-scoring tenth default at 27.5%, those in the
+  highest-scoring tenth at 1.3%, against an average of 8.1%.
+
+  ![Default rate by score decile, falling from 27.5% in the lowest band to 1.3% in the highest](figures/default_rate_by_band.png)
+
 - **Explainability costs little accuracy here.** An earlier tree-based benchmark (LightGBM) reached AUC
   0.7774. The scorecard gives up about 1.5 points of AUC and in return every decision can be explained.
 - **Fields other lenders drop carry signal.** Occupation type and income type, discarded by an earlier
@@ -60,7 +65,7 @@ python src/week8_full.py      # full pipeline, about 7 minutes, writes outputs/r
 python -m pytest              # tests on synthetic data, about 8 seconds, no dataset needed
 ```
 
-The walkthrough notebook is [`Credit_Risk_Scorecard.ipynb`](Credit_Risk_Scorecard.ipynb).
+The walkthrough notebook is [`Credit_Risk_Scorecard.ipynb`](Credit_Risk_Scorecard.ipynb). `python src/make_figures.py` redraws the charts in `figures/` from the same model.
 
 ## Limitations
 

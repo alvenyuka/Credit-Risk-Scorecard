@@ -10,7 +10,12 @@ from results_io import write_results
 from scorecard import build_scorecard, destandardize_coefficients, reason_codes, score_dataframe
 
 
-def main():
+def build_validation_scores():
+    """Fit the Week 8 model, build the scorecard, and score the validation set.
+
+    Shared by main() and make_figures.py so the charts describe exactly the model
+    whose metrics are written to outputs/results.json.
+    """
     result = week8_run.main()
 
     coef_raw, intercept_raw = destandardize_coefficients(
@@ -26,6 +31,11 @@ def main():
     X_val = result["X_val_raw"]
     y_val = result["y_val"]
     scores = score_dataframe(X_val, sc)
+    return result, sc, X_val, y_val, scores
+
+
+def main():
+    result, sc, X_val, y_val, scores = build_validation_scores()
 
     print("\n=== Scorecard ===")
     print(f"base_points={sc['base_points']:.1f}  factor={sc['factor']:.2f}  offset={sc['offset']:.1f}")
