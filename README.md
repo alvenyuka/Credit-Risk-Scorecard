@@ -1,95 +1,96 @@
 # Credit Risk Scorecard
 
-> Which loan applicants are likely to default, and can a lender tell a declined applicant exactly why? A points-based scorecard on 307,511 real Home Credit applicants: AUC 0.762, KS 0.394 on 61,503 held-out applicants.
+A points-based credit scorecard for 307,511 Home Credit loan applicants, built on Weight of Evidence and a
+logistic regression written from first principles. It ranks borrowers at **AUC 0.761** and **KS 0.393** on
+61,503 held-out applicants, and every decision comes with its reasons.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)](#how-it-works)
-[![AUC](https://img.shields.io/badge/AUC-0.762-success)](#what-i-found)
+[![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)](#getting-started)
 [![tests](https://github.com/alvenyuka/Credit-Risk-Scorecard/actions/workflows/ci.yml/badge.svg)](https://github.com/alvenyuka/Credit-Risk-Scorecard/actions/workflows/ci.yml)
 
-## The problem
+![Default rate by score decile, falling from 27.0% in the lowest band to 1.2% in the highest](figures/default_rate_by_band.png)
 
-A lender that declines a loan usually has to give the applicant a specific reason. US fair-lending rules
-require it, and the EU AI Act classes credit scoring as high risk. A black-box model can rank applicants
-well and still be unable to say why one was turned down. For a credit committee, a model it cannot explain
-is a model it cannot approve.
+## Overview
 
-This project builds the kind of model a regulated lender can defend: a scorecard where every applicant
-characteristic adds or removes a fixed number of points, so a decline comes with its reasons attached, for
-example "lost 18 points on employment history".
+Retail lenders need a model they can explain as well as trust. Fair-lending rules require a specific reason
+for every decline, and model-risk teams expect to review the direction of each variable before a model goes
+live. A scorecard meets both: each applicant characteristic adds or removes a fixed number of points.
 
-## What I found
+This project builds one on Home Credit's public data (applications, credit-bureau records and previous loans
+across eight tables). Weight of Evidence binning, the logistic regression solver and the AUC, KS, GINI and PSI
+metrics are implemented directly and tested against scikit-learn and scipy. Sex and marital status are excluded
+as prohibited bases under the US Equal Credit Opportunity Act and Regulation B.
 
-| Measure (61,503 held-out applicants) | Result |
+## Results
+
+| Metric (61,503 held-out applicants) | Value |
 |---|---:|
-| AUC, how well the score ranks good and bad borrowers | **0.7622** |
-| KS, the widest gap between repaid and defaulted score distributions | **0.3940** |
-| GINI | 0.5244 |
-| Average score, applicants who repaid vs defaulted (scale 300 to 656) | 455.6 vs 399.5 |
+| AUC | **0.761** |
+| KS | **0.393** |
+| GINI | 0.522 |
+| Default rate, lowest vs highest score decile | 27.0% vs 1.2% |
+| Mean score, repaid vs defaulted (scale 300 to 648) | 455 vs 400 |
 
-- **The score separates risk sharply.** Applicants in the lowest-scoring tenth default at 27.5%, those in the
-  highest-scoring tenth at 1.3%, against an average of 8.1%.
+- Removing the prohibited bases cost 0.001 AUC (0.762 to 0.761), so the lawful model gives up almost nothing.
+- The hand-written solver matches scikit-learn: predictions correlate at 0.999997 and coefficients agree to
+  within 0.0034.
+- Decline reasons read the way a credit officer would give them, for example "employment record flagged as
+  anomalous: -18.4 points; share of previous applications refused: -10.3 points".
 
-  ![Default rate by score decile, falling from 27.5% in the lowest band to 1.3% in the highest](figures/default_rate_by_band.png)
+## Approach
 
-- **Explainability costs little accuracy here.** An earlier tree-based benchmark (LightGBM) reached AUC
-  0.7774. The scorecard gives up about 1.5 points of AUC and in return every decision can be explained.
-- **Fields other lenders drop carry signal.** Occupation type and income type, discarded by an earlier
-  version of this pipeline, turned out to be predictive once encoded properly.
-- **Built by hand, checked against the standard libraries.** The statistics are written from scratch and
-  then compared with scikit-learn and scipy: predictions agree at a 0.999997 correlation.
+```mermaid
+flowchart LR
+    A[8 Home Credit tables] --> B[63 candidate features]
+    B --> C[WoE binning, IV >= 0.01: 54 kept]
+    C --> D[Logistic regression, from scratch]
+    D --> E[Points table: 600 at 20:1 odds, 40 PDO]
+    E --> F[Score and reason codes]
+```
 
-**What I would recommend to a credit committee:** use the scorecard, not the tree model, for approval
-decisions. The reasons it produces can be given to applicants, each bin's direction can be reviewed before
-the model is trained, and its point values move only slightly when refitted, which supports consistent
-treatment of similar applicants over time. Fix the first limitation below before any real use.
+1. **Features.** Application ratios plus aggregates of bureau history, previous applications, instalments and
+   card balances.
+2. **Weight of Evidence.** Numeric features in deciles, categoricals by level, with smoothing for sparse bins;
+   features below an information value of 0.01 are dropped.
+3. **Model.** Class-balanced logistic regression fitted by gradient descent on the WoE values.
+4. **Scaling.** Coefficients become points with 600 at 20:1 good-to-bad odds and 40 points to double the odds;
+   the largest point losses become the reason codes.
+5. **Validation.** A random 80/20 holdout. Every headline number is written by the pipeline to
+   [`outputs/results.json`](outputs/results.json), together with the commit and package versions.
 
-## How it works
+## Repository structure
 
-1. **Data.** The loan application plus the applicant's credit-bureau and previous-application history,
-   combined into 65 candidate features.
-2. **Weight of Evidence.** Each feature is grouped into bins and each bin is scored by how strongly it
-   separates repaid from defaulted loans; weak features are dropped, leaving 56.
-3. **Logistic regression**, written from scratch and fitted on those bins.
-4. **Points table.** Model coefficients become points, so each applicant's score is a sum of readable parts
-   and the largest point losses become the decline reasons.
-5. **Validation.** AUC, KS, GINI and PSI, each hand-coded and tested against library equivalents. Every
-   headline number is written by the code to [`outputs/results.json`](outputs/results.json).
+```
+src/                    features, WoE/IV, logistic regression, metrics, scorecard, figures
+tests/                  30 tests: statistics vs scikit-learn and scipy, binning, fair-lending exclusions
+outputs/results.json    every headline metric, written by the pipeline
+figures/                charts drawn from the same model
+docs/METHODOLOGY.md     full method and results
+```
 
-## Run it
+## Getting started
 
 ```bash
 pip install -r requirements.txt
-# put the 8 Home Credit Default Risk CSVs from Kaggle in data/ (not shipped)
-python src/week8_full.py      # full pipeline, about 7 minutes, writes outputs/results.json
-python -m pytest              # tests on synthetic data, about 8 seconds, no dataset needed
+python -m pytest              # 30 tests, no data needed
+# put the 8 Home Credit Default Risk CSVs from Kaggle in data/
+python src/week8_full.py      # fit, score and write outputs/results.json (about 7 minutes)
+python src/make_figures.py    # redraw figures/
 ```
 
-The walkthrough notebook is [`Credit_Risk_Scorecard.ipynb`](Credit_Risk_Scorecard.ipynb). `python src/make_figures.py` redraws the charts in `figures/` from the same model.
+## Notes
 
-## Limitations
+- Scores rank risk well, but the probabilities come from a class-balanced fit and are not calibrated to the 8%
+  base default rate.
+- The dataset carries no application dates, so validation is a random holdout rather than out-of-time.
 
-- **Gender and marital status are in the candidate features**, and gender appears in the reason codes.
-  These are prohibited bases for lending decisions, so they must be removed and the model refitted before
-  any real use. This is the next fix.
-- **Probability of default only**, not calibrated to this population's roughly 8% default rate, and not a
-  full IFRS 9 loss estimate (loss given default and exposure at default are not built).
-- **Random, not time-based, validation.** The dataset has no application dates, so an out-of-time test is
-  not possible on this data.
+## Documentation
 
-## More detail
-
-The full write-up, including every result, the bugs found along the way, the tests and all limitations, is
-in [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md). The live page at
-[credit-risk-alven.vercel.app](https://credit-risk-alven.vercel.app) shows applicants scored by an earlier
-version of this pipeline.
+The walkthrough notebook is [`Credit_Risk_Scorecard.ipynb`](Credit_Risk_Scorecard.ipynb); the full method, every
+result and the test suite are in [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md).
 
 ## License
 
 MIT. See [`LICENSE`](LICENSE). Data: [Home Credit Default Risk](https://www.kaggle.com/competitions/home-credit-default-risk) (Kaggle).
 
-## Connect
-
-Built by Alven Yuka, CPA Finalist and Accounting Specialist at GIZ, Nairobi.
-
-📫 [alvenyuka2@gmail.com](mailto:alvenyuka2@gmail.com) · 💼 [LinkedIn](https://www.linkedin.com/in/alven-yuka-610b78174/) · 🐙 [GitHub](https://github.com/alvenyuka)
+Alven Yuka · [LinkedIn](https://www.linkedin.com/in/alven-yuka-610b78174/) · [Email](mailto:alvenyuka2@gmail.com)

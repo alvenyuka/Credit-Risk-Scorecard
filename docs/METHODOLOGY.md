@@ -1,13 +1,13 @@
 # Credit Risk Scorecard: full methodology
 
-> The detailed write-up behind the short [README](../README.md): method, every result, tests, and known limitations. Moved here unchanged on 2026-09-29 when the README was shortened.
+> The detailed write-up behind the short [README](../README.md): method, every result, tests, and known limitations.
 
-> From-scratch WoE/IV and logistic regression on Home Credit's 307,511 real loan applicants, checked against scikit-learn and scipy at every step, with a points-based scorecard that gives a declined applicant a specific reason.
+From-scratch WoE/IV and logistic regression on Home Credit's 307,511 real loan applicants, checked against scikit-learn and scipy at every step, with a points-based scorecard that gives a declined applicant a specific reason.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../LICENSE)
 [![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)](#tech-stack)
 [![scikit-learn](https://img.shields.io/badge/scikit--learn-F7931E?style=flat&logo=scikit-learn&logoColor=white)](#tech-stack)
-[![AUC](https://img.shields.io/badge/AUC-0.762-success)](#results)
+[![AUC](https://img.shields.io/badge/AUC-0.761-success)](#results)
 [![tests](https://github.com/alvenyuka/Credit-Risk-Scorecard/actions/workflows/ci.yml/badge.svg)](https://github.com/alvenyuka/Credit-Risk-Scorecard/actions/workflows/ci.yml)
 
 A credit scorecard for Home Credit's loan applicants, built from Weight of
@@ -15,10 +15,10 @@ Evidence, a from-scratch logistic regression, and a points-based scorecard
 a loan officer can read.
 
 Start with [`Credit_Risk_Scorecard.ipynb`](../Credit_Risk_Scorecard.ipynb). It runs
-the full 307,511-applicant dataset end to end, and keeps the working notes
-and dead ends in rather than tidying them out afterward.
+the full 307,511-applicant dataset end to end and reproduces the figures in
+`outputs/results.json`.
 
-## Why?
+## Question
 
 A credit model that declines someone often has to say why. Under the US Equal
 Credit Opportunity Act that reason has to be specific, and the EU AI Act treats
@@ -37,8 +37,7 @@ expects similar applicants treated consistently over time.
 The second reason is that the statistics are written out rather than imported.
 Weight of Evidence, Information Value, the logistic regression solver, and
 AUC, GINI, KS and PSI are all built here and then checked against scikit-learn
-and scipy. One of those checks failed the first time, which is the part worth
-reading.
+and scipy; the KS check caught a real defect under tied scores (see Tests).
 
 ## Project Structure
 
@@ -86,7 +85,7 @@ evenings, nothing more; the numbering has no meaning beyond sequence.
 
 - **Weight of Evidence / Information Value, logistic regression, and scoring metrics (AUC, GINI, KS, PSI) built from scratch**, not imported. The metrics and the solver were checked against scikit-learn and scipy before being trusted. WoE/IV has no library equivalent to check against, so it is covered by its own test suite instead (see "Tests").
 - **A points-based scorecard**: every WoE bin becomes a specific score contribution, so a declined applicant's biggest point losses are named, not just a number.
-- **Application, bureau, and previous-application history** combined into a single feature set (65 candidate features, of which 11 are WoE-encoded as categorical: 10 nominal columns plus one binary flag).
+- **Application, bureau, and previous-application history** combined into a single feature set (63 candidate features, of which 9 are WoE-encoded as categorical: 8 nominal columns plus one binary flag; sex and marital status are excluded as prohibited bases).
 - **A live case-study page** ([credit-risk-alven.vercel.app](https://credit-risk-alven.vercel.app)) showing 20 held-out applicants scored by the earlier pipeline. It reads `output/demo_applicants.json`, which predates this rebuild; this repo ships no model artefact, so nothing here scores an applicant live.
 
 ## Tech Stack
@@ -118,75 +117,42 @@ jupyter nbconvert --to notebook --execute Credit_Risk_Scorecard.ipynb \
   --output Credit_Risk_Scorecard.ipynb --ExecutePreprocessor.timeout=900
 ```
 
-## Why this version of the repo looks different
+## Repository history
 
-This used to be a bigger pipeline: 400 candidate features, a LightGBM
-benchmark, calibration figures, a live demo site. I replaced it with this rebuild on
-purpose. I wanted to see if I could get to a working scorecard again on my
-own, without opening the old code, and be honest in the notebook about what
-went wrong along the way instead of only showing the finished version. The
-old pipeline is still in this repo's git history if you want to see it.
+An earlier version of this repo was a larger pipeline: 400 candidate features, a
+LightGBM benchmark and calibration figures. It was replaced by this smaller
+rebuild, which keeps every statistic implemented and tested in `src/`; the old
+pipeline remains in the git history.
 
-Two things from the old version are still here deliberately: `figs/` and
-`output/demo_applicants.json`. The live demo at
-[credit-risk-alven.vercel.app](https://credit-risk-alven.vercel.app) reads
-both straight from this repo, so removing them would have quietly broken a
-page that still works. Everything else described below is the new build.
-
-### The four figures in `figs/`, and what they are not
-
-These four charts are the old 400-feature pipeline's output. They are shown
-here rather than under Results, because none of them depicts the model this
-repo now builds. The rebuild writes no charts at all: there is no matplotlib
-import and no `savefig` call anywhere in `src/` or `build_notebook.py`, so
-regenerating them against the current model would mean writing that code
-first. Read them as a record of the earlier build.
-
-![Top 20 features by information value, old pipeline](../figs/iv_top20.png)
-
-Old pipeline's top features by IV. The bars are interaction terms
-(`EXT_SOURCE_2_x_3`, `EXT_SOURCE_MEAN_x_AGE`) and double-prefixed aggregates
-that the rebuild's 65-candidate feature set does not contain.
-
-![Calibration curve, old pipeline](../figs/calibration_curve.png)
-
-![Lift chart, old pipeline](../figs/lift_chart.png)
-
-Both compare the old from-scratch LR against the old LightGBM benchmark. The
-rebuild has no tree benchmark and its calibration was never measured.
-
-![Predicted probability distribution, old LightGBM pipeline](../figs/score_distribution.png)
-
-This one is mislabelled by its own filename. It is a LightGBM predicted
-probability histogram on a 0 to 1 axis, not a distribution of scorecard
-points. The rebuild's score distribution is described in words under Results
-and is not plotted anywhere.
+`figs/` and `output/demo_applicants.json` are kept from that version because the
+demo at [credit-risk-alven.vercel.app](https://credit-risk-alven.vercel.app)
+reads them from this repo. They describe the old pipeline, not the current model.
+The current model's charts are in `figures/`, drawn by `src/make_figures.py` from
+the same fit that writes `outputs/results.json`.
 
 ## Methodology
 
-I started with just the loan application form and a naive logistic
-regression, to see how far that alone would get me (0.75 AUC, a floor to
-beat). Then I built Weight of Evidence, logistic regression, and the usual
-credit-scoring metrics (AUC, GINI, KS, PSI) from scratch instead of
-importing them, and checked every one against scikit-learn and scipy before
-trusting it. One of those checks failed the first time: my KS statistic was
-off under tied scores because I was checking the good/bad gap in the middle
-of a tied block instead of at a threshold that exists in the data. Fixed it, and it matched
-exactly.
-
-After that I added bureau history and previous-application data, which
-pushed AUC to 0.76, and built a points-based scorecard where every WoE bin
-becomes a specific score contribution, so a declined applicant's biggest
-point losses are things like "lost 18 points on employment history," not a
-number with no explanation attached.
-
-I also caught a mistake in my own comparison. I thought I'd found
-model instability from correlated features (my from-scratch model's
-predictions correlated with scikit-learn's at only 0.905), when the actual
-problem was that scikit-learn was using `class_weight="balanced"` and my own
-implementation wasn't. Once I fixed that, the prediction correlation rose to
-0.999997. Should have checked that before assuming the disagreement meant
-something.
+1. **Baseline.** A logistic regression on the application form alone sets the
+   floor: AUC 0.7467 on the holdout (printed by the notebook).
+2. **Statistics implemented and verified.** Weight of Evidence, Information Value,
+   a gradient-descent logistic regression and AUC, GINI, KS and PSI are written in
+   `src/` and checked against scikit-learn and scipy. KS is computed per distinct
+   score, because a row-by-row version evaluates the gap inside blocks of tied
+   scores, which a bucketed scorecard produces.
+3. **Relational features.** Credit-bureau records, previous applications,
+   instalment and card-balance history are aggregated per applicant, giving 63
+   candidate features after the prohibited bases are excluded.
+4. **Selection and fit.** Numeric features are binned in deciles and categoricals
+   by level; features with IV below 0.01 are dropped, leaving 54. The model is a
+   class-balanced logistic regression on standardised WoE values. It matches
+   scikit-learn's fit of the same objective to a prediction correlation of
+   0.999997; an earlier comparison against an unweighted fit showed 0.905, which
+   was a difference in objective, not solver instability.
+5. **Scorecard.** Coefficients are scaled to points with 600 at 20:1 good-to-bad
+   odds and 40 points to double the odds. The bins where an applicant lost the
+   most points become the reason codes, for example `DAYS_EMPLOYED_ANOM` -18.4
+   points and `PREV_REFUSED_SHARE` -10.3 points for a defaulted applicant in the
+   holdout.
 
 ## Results
 
@@ -198,59 +164,55 @@ validation row count, so any of those figures can be checked rather than taken o
 trust.
 
 Three rows in the table below come from somewhere else, and say so here rather
-than being folded into the claim above. **Candidate features (65)** and
-**categorical features (11)** are the lengths of the feature lists in
-`src/week8_run.py`, not metrics of the run; the next run records them in
-`results.json` as well. The whole **Old pipeline** column is read from the
+than being folded into the claim above. **Candidate features (63)** and
+**categorical features (9)** are recorded in `results.json` by the run. The whole **Old pipeline** column is read from the
 pre-rebuild README and `BUILD_STATUS.md` at commit `a8708a0~1`, which is in this
 repo's git history.
 
-`results.json` records `git_commit: d74c298`, which is behind HEAD. The commits
-since it touched only the README and the tests, not `src/`, so the figures still
-describe the code that is here.
+`results.json` records `git_commit: 54eaa9f`, the commit that excluded the
+prohibited bases; the figures describe that code.
 
 | | This rebuild | Old pipeline |
 |---|---:|---:|
-| AUC | 0.7622 | 0.751 |
-| KS | 0.3940 | 0.377 to 0.381 |
-| GINI | 0.5244 | not reported |
+| AUC | 0.7611 | 0.751 |
+| KS | 0.3930 | 0.377 to 0.381 |
+| GINI | 0.5221 | not reported |
 | Prediction correlation vs scikit-learn | 0.999997 | 0.9985 |
-| Max coefficient difference vs scikit-learn | 0.0031 | 0.298 |
-| Features kept after selection | 56 | 80 |
-| Candidate features | 65 | 400 |
-| Categorical features used | 11 | 0 |
+| Max coefficient difference vs scikit-learn | 0.0034 | 0.298 |
+| Features kept after selection | 54 | 80 |
+| Candidate features | 63 | 400 |
+| Categorical features used | 9 | 0 |
 
 Validation set: 61,503 applicants, a holdout split rather than the Kaggle test
 set, so these are not leaderboard scores.
 
-Not a fair head-to-head. Different train/test splits, and the old pipeline
-did a lot more relational feature engineering than I redid here. What I
-take from it: a much smaller, independently built feature set gets
-comparable results, and the categorical columns the old pipeline dropped
-(occupation type, income type) turned out to carry signal.
+This is not a controlled comparison: the splits differ, and the old pipeline
+engineered far more relational features. It does show that a much smaller
+feature set reaches comparable separation, and that categorical columns the old
+pipeline dropped (occupation type, income type) carry signal.
 
-One number the comparison leaves out on purpose, so put it back: the old
+For completeness, the old
 pipeline also ran a LightGBM benchmark that reached AUC 0.7774, higher than
 either from-scratch model here. The 0.751 above is its from-scratch LR, which
 is the like-for-like comparison. This rebuild has no tree benchmark at all.
 
-The coefficient difference is the interesting column. On this 56-feature set the
-from-scratch solver lands within 0.0031 of scikit-learn; the old pipeline's
+The coefficient difference is the interesting column. On this 54-feature set the
+from-scratch solver lands within 0.0034 of scikit-learn; the old pipeline's
 80-feature set diverged by 0.298. That gap is not a better solver, it is less
 redundancy in the feature set: the old version selected four engineered variants
 of the same three `EXT_SOURCE` columns, and near-duplicate predictors make
 coefficients unstable without hurting predictions. Same reason its predictions
 still correlated at 0.9985.
 
-There are no charts in this section. The four images in `figs/` are the old
-pipeline's and are shown, with that said plainly, under "Why this version of
-the repo looks different" above. The rebuild writes no figures.
+![Default rate by score decile, falling from 27.0% in the lowest band to 1.2% in the highest](../figures/default_rate_by_band.png)
+
+![Score distribution for applicants who repaid and who defaulted](../figures/score_distribution.png)
 
 ### Information value of the selected features
 
 The strongest single feature is `EXT_SOURCE_MEAN` at IV 0.6091, which trips this
 repo's own `iv_strength()` red flag for "suspiciously strong (check for
-leakage)". I checked it and kept it: `EXT_SOURCE_1/2/3` are external bureau
+leakage)". It was checked and kept: `EXT_SOURCE_1/2/3` are external bureau
 scores supplied with the application, they are legitimate pre-decision inputs,
 and their three components sit at IV 0.15 to 0.33 individually. The mean of them
 is stronger than any one, which is what an average of three noisy scores of the
@@ -266,12 +228,12 @@ measure calibration, which is a gap, not a result.
 
 ### Score distribution
 
-Mean score 455.6 for applicants who repaid, 399.5 for those who defaulted, on a
-scale running 300 to 656. The point-biserial correlation between score and
-default is -0.263: higher score, lower risk, which is the direction a scorecard
+Mean score 455.3 for applicants who repaid, 399.8 for those who defaulted, on a
+scale running 300 to 648. The point-biserial correlation between score and
+default is -0.261: higher score, lower risk, which is the direction a scorecard
 has to have before anything else about it matters.
 
-## What I'd recommend
+## Recommendation
 
 Logistic regression on Weight of Evidence features, not a gradient-boosted
 model, even though the tree model would probably score higher. A declined
@@ -286,12 +248,9 @@ What it does not do is listed under Known Limitations below, once each.
 
 ## Known Limitations
 
-Everything I would fix next is here, in one place, rather than spread across
-three sections saying the same thing in different words.
-
 - **Base odds aren't calibrated to this population.** 20 good borrowers per bad one at a score of 600 is a reasonable default, not fit to this dataset's actual ~8% default rate. Calibrating it would be the first fix.
 - **Validation split is random, and an out-of-time split is not possible on this data.** `application_train.csv` carries no absolute application date: every temporal field is a day offset relative to the application itself. There is no column to sort on, so a forward time split cannot be constructed here at all. It is a property of the dataset, not a to-do. Doing it properly needs a source with real application timestamps.
-- **Prohibited bases are in the candidate feature set.** `CODE_GENDER` and `NAME_FAMILY_STATUS` are in the 65 candidates, `CODE_GENDER` clears the IV 0.01 gate, and it appears in the fitted scorecard's reason codes. Sex and marital status are prohibited bases under ECOA and Regulation B, so "lost 7.8 points on CODE_GENDER" is not a reason a lender could lawfully give, which cuts directly against the argument this README opens with. A production build drops them before binning. This one is a defect, not a design choice, and it is not fixed here because fixing it means refitting and restating every number above.
+- **Prohibited bases are excluded.** `CODE_GENDER` and `NAME_FAMILY_STATUS` are sex and marital status, prohibited bases under ECOA and Regulation B, so they never enter the candidate set (`PROHIBITED_BASES` in `src/baseline_features.py`, pinned by `tests/test_fair_lending.py`). Refitting without them moved AUC from 0.7622 to 0.7611. Age is retained, which Regulation B permits in an empirically derived system provided applicants aged 62 or over are not assigned a negative factor.
 - **Quantile binning collapses zero-inflated columns.** `fit_continuous_bins` takes deciles and dedupes the edges, so a column where most applicants sit at zero (the delinquency and overdue aggregates) loses its entire non-zero tail to one or two bins, and a 0/1 flag collapses to a single bin with IV exactly 0. Two consequences visible in this run: `BUREAU_OVERDUE_MAX` and `BUREAU_OVERDUE_MEAN` land on the identical two-bin split and so correlate at r = 1.000 once WoE-encoded, and three delinquency features fall below the IV gate and are dropped. Supervised or zero-aware binning would keep them. `tests/test_woe_iv.py` pins the behaviour so a fix cannot land silently.
 - **PD only, not a full IFRS 9 loss estimate.** This scorecard outputs a probability of default; loss given default and exposure at default are separate models not built here.
 - **The rebuild-vs-old-pipeline comparison in Results isn't a controlled benchmark**: different train/test splits, not an apples-to-apples A/B.
@@ -338,7 +297,7 @@ The full pipeline run against the real data stays a local step.
 - [x] Bureau and previous-application relational features
 - [x] Points-based scorecard with reason codes
 - [ ] Calibrate base odds to this dataset's actual ~8% default rate
-- [ ] Drop ECOA-prohibited bases from the candidate set and refit
+- [x] Drop ECOA-prohibited bases from the candidate set and refit
 - [ ] Zero-aware or supervised binning for the delinquency columns
 - [ ] LGD/EAD models for a full IFRS 9 loss estimate
 - Out-of-time validation split: not possible on this dataset, see Known Limitations
