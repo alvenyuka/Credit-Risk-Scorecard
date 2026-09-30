@@ -26,37 +26,37 @@ def code(text):
 # ---------------------------------------------------------------------------
 
 md("""
-# Credit Risk Scorecard: a blind rebuild
+# Credit Risk Scorecard
 
-I already had a working credit scorecard for this dataset. This notebook is
-me rebuilding it from a blank file, on purpose, without looking at the old
-code while I worked. The point wasn't to get a better number. It was to
-actually earn the numbers instead of having them sitting in a repo I could
-recite but not fully explain.
+A points-based credit scorecard for Home Credit's public dataset: 307,511 loan
+applicants across 8 related tables (the application, credit-bureau records,
+previous applications and repayment history).
 
-The question I'm answering: using an applicant's loan application and their
-history with other lenders, can I separate good borrowers from bad ones well
-enough to build a scorecard a loan officer could actually use, and can I
-explain every point on that scorecard in plain language?
+The question: using an applicant's application and their history with other
+lenders, can the model separate borrowers who repay from those who default well
+enough for a lending decision, with a specific, readable reason behind every
+score?
 
-Dataset: Home Credit's public Kaggle competition, 307,511 applicants, 8
-related tables (application, bureau history, previous loans, payment
-records).
+The notebook walks through the pipeline in four steps. Every function it calls
+lives in `src/` and is covered by the test suite, so the numbers here are the
+ones the pipeline itself produces (`outputs/results.json`).
 """)
 
 md("""
-## Step 1: a baseline, using only the application form
+## Step 1: a baseline from the application form alone
 
-Before pulling in anyone's credit history, I wanted to know how far the
-application form alone could get me. This sets a floor. Anything I add
-later has to beat it.
+The application form sets the floor: anything added later has to beat it.
 
-I built a few features by hand. The one worth mentioning: `DAYS_EMPLOYED`
-has a placeholder value of 365243 for pensioners and unemployed applicants,
-which is about a thousand years. Left alone, that turns retirees into
-people with a thousand years of work history, which breaks any ratio built
-on top of it. I caught this by looking at `describe()` on the raw column,
-not because anyone told me about it.
+One data-quality issue shapes the features. `DAYS_EMPLOYED` holds the
+placeholder 365243 (about a thousand years) for pensioners and unemployed
+applicants. Left in, it gives retirees a millennium of work history and breaks
+every ratio built on it, so it becomes an explicit anomaly flag and the value is
+set to missing.
+
+Sex (`CODE_GENDER`) and marital status (`NAME_FAMILY_STATUS`) are prohibited
+bases under the US Equal Credit Opportunity Act and Regulation B, so they are
+excluded from the candidate features (`PROHIBITED_BASES` in
+`src/baseline_features.py`, pinned by `tests/test_fair_lending.py`).
 """)
 
 code("""
@@ -88,27 +88,21 @@ print(f"application-only baseline AUC: {baseline_auc:.4f}")
 """)
 
 md("""
-0.75 AUC using only what's on the application form. That's a real number,
-in line with what other people get on this dataset using just the
-application table. It's not the final answer. It's the number everything
-else in this notebook has to beat.
+The application form alone gives the AUC printed above, in line with public
+results that use only this table. It is the benchmark the full feature set has
+to beat.
 """)
 
 # ---------------------------------------------------------------------------
 
 md("""
-## Step 2: building the statistics from scratch
+## Step 2: the credit statistics, implemented and verified
 
-A logistic regression score isn't something a credit committee will just
-trust. What they actually want to see is Weight of Evidence and Information
-Value, the standard credit-scoring statistics, and they want to know the
-model itself is doing what it's supposed to.
-
-So I built four things by hand instead of importing them: Weight of
-Evidence / Information Value, a logistic regression trained with plain
-gradient descent, and the four metrics a credit team checks (AUC, GINI, KS,
-PSI). Then I checked every one against scikit-learn and scipy before
-trusting any of them on real data.
+A credit committee reviews a scorecard through Weight of Evidence (WoE) and
+Information Value (IV), and model-risk teams expect the statistics to be
+verifiable. WoE/IV, a gradient-descent logistic regression and the four metrics
+a credit team checks (AUC, GINI, KS, PSI) are implemented in `src/` and checked
+against scikit-learn and scipy before being used on real data.
 """)
 
 code("""
@@ -118,7 +112,7 @@ from sklearn.metrics import roc_auc_score as sk_roc_auc_score
 from scipy.stats import ks_2samp
 import numpy as np
 
-# sanity check on synthetic data before trusting these on anything real
+# check on synthetic data before using these on real applicants
 rng = np.random.default_rng(0)
 n = 5000
 y_test = rng.integers(0, 2, n)
@@ -139,19 +133,16 @@ print("both match to floating point precision")
 """)
 
 md("""
-The KS check almost didn't pass. My first version computed it row by row
-after sorting by score, and under tied scores that evaluates the good/bad
-gap in the middle of a block of ties, which isn't a real point on the curve.
-I only caught this because I deliberately rounded the test scores to force
-ties before checking. Fixed it by grouping on the distinct score value
-first, then taking cumulative sums. Worth mentioning because it's a good
-example of why you validate against a library instead of assuming your own
-math is right.
+The KS check is the one worth testing under tied scores. Computed row by row
+after sorting, KS evaluates the gap between the good and bad distributions in
+the middle of a block of tied scores, which is not a point on the curve. The
+implementation groups by distinct score before taking cumulative sums, and the
+test rounds the scores to force ties so that an ungrouped version would fail.
 """)
 
 code("""
 # now the real thing: Weight of Evidence and Information Value on the
-# application features, ranked so I can see what actually matters.
+# application features, ranked by predictive strength.
 # DAYS_EMPLOYED_ANOM is a 0/1 flag, not something to quantile-bin as
 # continuous, so it gets treated as categorical like the other flags do.
 woe_fits = {}
@@ -168,28 +159,28 @@ for col, iv in iv_ranked[:10]:
 """)
 
 md("""
-The three EXT_SOURCE columns dominate. They're external bureau-style scores
-already sitting in the data, and nothing on the application form itself
-comes close. That's not a surprise if you've read about this dataset
-before, but I found it myself before reading anything, which is the point.
+The three `EXT_SOURCE` columns, external bureau-style scores supplied with the
+data, carry far more information than any field on the application form, which
+matches what is known about this dataset.
+
+`EXT_SOURCE_MEAN` crosses the IV threshold that the helper labels "check for
+leakage". It is checked rather than assumed: it is the average of the three
+external scores, all of which exist when the application is made, so its IV
+reflects their combined strength, not information from after the decision.
 """)
 
 # ---------------------------------------------------------------------------
 
 md("""
-## Step 3: bureau history, previous loans, and the scorecard
+## Step 3: bureau history, previous loans and the scorecard
 
-The application form is only part of the picture. Home Credit also gives
-you the applicant's history with other lenders (bureau records), their
-past applications with Home Credit itself, and their actual payment
-behavior on prior loans. I built my own aggregations from these tables:
-counts, averages, how much of their bureau history is overdue, how often
-their past applications were approved or refused.
+Credit-bureau records, previous Home Credit applications and repayment history
+are aggregated per applicant: counts, averages, the share of bureau credit
+overdue, and how often past applications were approved or refused.
 
-Adding this pushed the AUC up and also let me build something a loan
-officer could actually use: a points-based scorecard, where every WoE bin
-becomes a specific point value, and the reason for a low score is a list of
-which bins the applicant landed in.
+These features lift the AUC and support a points-based scorecard, in which each
+WoE bin carries a fixed number of points and the reason for a low score is the
+list of bins where the applicant lost the most points.
 """)
 
 code("""
@@ -266,20 +257,18 @@ print(f"full feature set AUC: {full_auc:.4f} (up from {baseline_auc:.4f} using t
 
 coef_diff = np.abs(sk_full.coef_.ravel() - mine_full.coef_)
 pred_corr = np.corrcoef(sk_val_pred, my_val_pred)[0, 1]
-print(f"my model vs scikit-learn: max coefficient diff={coef_diff.max():.4f}, prediction correlation={pred_corr:.6f}")
+print(f"from-scratch vs scikit-learn: max coefficient diff={coef_diff.max():.4f}, prediction correlation={pred_corr:.6f}")
 """)
 
 md("""
-The first time I ran this comparison, the correlation between my model and
-scikit-learn's was only 0.905, and I assumed that was multicollinearity
-from correlated features (some of the bureau features really are close to
-duplicates of each other). It wasn't, mostly. scikit-learn was using
-`class_weight="balanced"` and my from-scratch model wasn't, so I was
-comparing two different optimization problems, not two solvers of the same
-one. Once I added the same class weighting to my own implementation, the
-correlation jumped to 0.999997. The lesson: check that you're actually
-comparing apples to apples before you write down a conclusion about why two
-models disagree.
+The from-scratch solver and scikit-learn fit the same class-balanced objective,
+so their predictions should agree almost exactly, and they do (correlation
+printed above). An earlier version compared an unweighted fit with scikit-learn's
+`class_weight="balanced"` fit and showed a correlation of only 0.905, which looked
+like multicollinearity but was two different optimisation problems. Coefficients
+still differ slightly more than predictions because several bureau features are
+close to duplicates, which leaves individual coefficients less determined than
+the combined score.
 """)
 
 code("""
@@ -301,7 +290,7 @@ print(f"average score, applicants who defaulted: {scores[yf_val == 1].mean():.1f
 """)
 
 code("""
-# one applicant who repaid, one who defaulted, and why the scorecard says what it says
+# one applicant who repaid and one who defaulted, with the reasons behind each score
 good_idx = Xf_val.index[yf_val == 0][0]
 bad_idx = Xf_val.index[yf_val == 1][0]
 
@@ -313,40 +302,36 @@ for label, idx in [("repaid the loan", good_idx), ("defaulted", bad_idx)]:
 """)
 
 md("""
-That's the actual point of building the scorecard this way instead of just
-reporting an AUC number. A loan officer, or a hiring manager, can read
-"lost 17 points on DAYS_EMPLOYED_ANOM" and know exactly what drove the
-score. A SHAP value from a gradient-boosted model doesn't hand you that as
-directly.
+This is what the scorecard format buys over a raw probability: a loan officer
+can read that an applicant lost a given number of points on
+`DAYS_EMPLOYED_ANOM` and know exactly what drove the score. A gradient-boosted
+model explained with SHAP does not hand over a fixed, auditable point table in
+the same way.
 """)
 
 # ---------------------------------------------------------------------------
 
 md("""
-## Step 4: what I'd tell a credit committee
+## Step 4: recommendation to a credit committee
 
-Logistic regression on Weight of Evidence features isn't the most accurate
-model I could build here. A gradient-boosted tree would likely score higher.
-I'd still recommend the scorecard approach for an actual lending decision,
-for three reasons that have nothing to do with raw accuracy: every point on
-the scorecard has a specific, checkable reason attached to it, which matters
-when a declined applicant is entitled to know why; the monotonicity of each
-WoE bin can be checked in a table before the model is even fit, instead of
-hoping a tree model learned it; and the point table changes gently when
-retrained on new data, which matters to a regulator who expects consistent
-treatment of similar applicants over time.
+A gradient-boosted model would probably rank applicants somewhat better. The
+scorecard is still the stronger choice for a lending decision, for reasons other
+than raw accuracy:
 
-What this model outputs is a probability of default. A full loss provision
-under IFRS 9 needs that multiplied by loss given default and exposure at
-default, both separate modeling problems I didn't build here. Worth being
-upfront about that boundary rather than implying this notebook alone
-produces a provisioning number.
+- every point has a specific, checkable reason, which a declined applicant is
+  entitled to under adverse-action rules;
+- the monotonicity of each WoE bin can be reviewed in a table before the model
+  is fitted, rather than hoped for in a tree ensemble;
+- the point table moves gently when refitted on new data, which supports the
+  consistent treatment of similar applicants that regulators expect.
 
-If I extended this further, the next thing I'd fix is the scorecard's base
-odds. I picked 20 good borrowers per 1 bad at a score of 600 because it's a
-reasonable default, not because I calculated it from this population. The
-real fix is calibrating that number to this dataset's actual default rate,
-around 8%, instead of assuming a round number.
+Scope: the model outputs a probability of default. An IFRS 9 provision also
+needs loss given default and exposure at default, which are separate models not
+built here.
+
+Next step: the base odds of 20:1 at a score of 600 are a conventional anchor,
+not calibrated to this population. Calibrating them to the observed default
+rate of about 8% would make the score readable as a probability.
 """)
 
 nb["cells"] = cells
