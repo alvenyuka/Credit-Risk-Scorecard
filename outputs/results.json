@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-09-28T00:20:01+00:00",
-  "git_commit": "d74c298",
+  "generated_at_utc": "2026-09-30T00:30:47+00:00",
+  "git_commit": "54eaa9f",
   "data_source": "real",
   "python": "3.13.9",
   "packages": {
@@ -10,21 +10,22 @@
     "scipy": "1.17.1"
   },
   "metrics": {
-    "val_auc": 0.7622013117611244,
-    "val_ks": 0.39396207496837404,
-    "val_gini": 0.5244026235222488,
-    "pred_corr_vs_sklearn": 0.9999973352848605,
-    "coef_diff_max_vs_sklearn": 0.0031049834553395494,
-    "n_features_kept": 56,
+    "val_auc": 0.7610522231801463,
+    "val_ks": 0.39295579509714557,
+    "val_gini": 0.5221044463602926,
+    "pred_corr_vs_sklearn": 0.9999972573547413,
+    "coef_diff_max_vs_sklearn": 0.0033899704521086343,
+    "n_features_kept": 54,
+    "n_candidate_features": 63,
+    "n_categorical_features": 9,
     "n_validation_rows": 61503,
-    "point_biserial_score_vs_default": -0.26256664535605545,
+    "point_biserial_score_vs_default": -0.26112539376265326,
     "score_min": 300.0,
-    "score_max": 656.2519827120926,
-    "mean_score_repaid": 455.61567284286593,
-    "mean_score_defaulted": 399.50393087815104,
-    "scorecard_base_points": 427.44133663983774,
+    "score_max": 647.5239669266938,
+    "mean_score_repaid": 455.3197401929445,
+    "mean_score_defaulted": 399.77333575383165,
+    "scorecard_base_points": 427.46405815889153,
     "scorecard_factor": 57.70780163555854
   },
-  "notes": "Home Credit Default Risk, 8 relational tables. Validation is a holdout split, not the Kaggle test set, so these figures are not leaderboard scores. coef_diff_max_vs_sklearn is expected to be larger on the full selected feature set than on a small clean one; that is multicollinearity among near-duplicate selected features, not a solver defect.",
-  "git_commit_note": "Recorded as 22777c3 by the run that produced these metrics. The repository history was later rewritten; d74c298 is that same commit, carrying a byte-identical tree, under its new hash."
+  "notes": "Home Credit Default Risk, 8 relational tables. Validation is a holdout split, not the Kaggle test set, so these figures are not leaderboard scores. coef_diff_max_vs_sklearn is expected to be larger on the full selected feature set than on a small clean one; that is multicollinearity among near-duplicate selected features, not a solver defect."
 }
