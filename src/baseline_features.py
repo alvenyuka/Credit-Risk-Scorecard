@@ -37,9 +37,15 @@ BASE_NUMERIC_COLS = [
     "EXT_SOURCE_1", "EXT_SOURCE_2", "EXT_SOURCE_3",
 ]
 
+# Sex and marital status are prohibited bases for a credit decision under the US Equal
+# Credit Opportunity Act and Regulation B (12 CFR 1002.6(b)), so they never enter the
+# candidate set. Age is kept: Regulation B allows it in an empirically derived scoring
+# system provided applicants aged 62 or over are not assigned a negative factor.
+PROHIBITED_BASES = ["CODE_GENDER", "NAME_FAMILY_STATUS"]
+
 CATEGORICAL_COLS = [
-    "NAME_CONTRACT_TYPE", "CODE_GENDER", "FLAG_OWN_CAR", "FLAG_OWN_REALTY",
-    "NAME_INCOME_TYPE", "NAME_EDUCATION_TYPE", "NAME_FAMILY_STATUS",
+    "NAME_CONTRACT_TYPE", "FLAG_OWN_CAR", "FLAG_OWN_REALTY",
+    "NAME_INCOME_TYPE", "NAME_EDUCATION_TYPE",
     "NAME_HOUSING_TYPE", "OCCUPATION_TYPE", "ORGANIZATION_TYPE",
 ]
 
