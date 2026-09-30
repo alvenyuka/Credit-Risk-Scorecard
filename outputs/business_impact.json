@@ -1,0 +1,59 @@
+{
+  "assumptions": {
+    "lgd": 0.45,
+    "lgd_basis": "Basel foundation-IRB supervisory LGD for senior unsecured exposures",
+    "exposure": "AMT_CREDIT, the credit amount of the application",
+    "currency": "not stated in the Home Credit data; figures are in its own currency units",
+    "population": "the 61,503-applicant holdout used for every other metric"
+  },
+  "policies": [
+    {
+      "approval_rate": 1.0,
+      "approved": 61503,
+      "cut_off_score": NaN,
+      "default_rate_approved": 0.08072776937710356,
+      "credit_loss": 1248910971.9750001,
+      "loss_avoided_vs_approve_all": 0.0,
+      "loss_avoided_pct": 0.0,
+      "good_borrowers_declined": 0,
+      "good_borrowers_declined_pct": 0.0,
+      "credit_approved": 36765080145.0
+    },
+    {
+      "approval_rate": 0.9,
+      "approved": 55353,
+      "cut_off_score": 372.75516325320393,
+      "default_rate_approved": 0.05965349664878146,
+      "credit_loss": 884524035.825,
+      "loss_avoided_vs_approve_all": 364386936.1500001,
+      "loss_avoided_pct": 0.29176374003165867,
+      "good_borrowers_declined": 4487,
+      "good_borrowers_declined_pct": 0.07936255261947717,
+      "credit_approved": 33847338730.5
+    },
+    {
+      "approval_rate": 0.8,
+      "approved": 49202,
+      "cut_off_score": 400.3956246288986,
+      "default_rate_approved": 0.048189098004146176,
+      "credit_loss": 655774906.5,
+      "loss_avoided_vs_approve_all": 593136065.4750001,
+      "loss_avoided_pct": 0.47492261561048493,
+      "good_borrowers_declined": 9707,
+      "good_borrowers_declined_pct": 0.17168983692383882,
+      "credit_approved": 30668138788.5
+    },
+    {
+      "approval_rate": 0.7,
+      "approved": 43052,
+      "cut_off_score": 420.1590162003562,
+      "default_rate_approved": 0.03964972591284958,
+      "credit_loss": 488610617.85,
+      "loss_avoided_vs_approve_all": 760300354.1250001,
+      "loss_avoided_pct": 0.6087706579458406,
+      "good_borrowers_declined": 15193,
+      "good_borrowers_declined_pct": 0.26872192153949553,
+      "credit_approved": 27334094985.0
+    }
+  ]
+}
