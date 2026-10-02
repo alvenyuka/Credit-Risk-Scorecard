@@ -1,31 +1,323 @@
 {
-  "generated_at_utc": "2026-09-30T00:30:47+00:00",
-  "git_commit": "54eaa9f",
+  "generated_at_utc": "2026-10-02T21:39:30+00:00",
+  "git_commit": "c3829b2",
   "data_source": "real",
   "python": "3.13.9",
   "packages": {
     "numpy": "2.4.6",
     "pandas": "3.0.3",
     "scikit-learn": "1.8.0",
-    "scipy": "1.17.1"
+    "scipy": "1.17.1",
+    "matplotlib": "3.9.2",
+    "pyarrow": "24.0.0"
   },
   "metrics": {
-    "val_auc": 0.7610522231801463,
-    "val_ks": 0.39295579509714557,
-    "val_gini": 0.5221044463602926,
-    "pred_corr_vs_sklearn": 0.9999972573547413,
-    "coef_diff_max_vs_sklearn": 0.0033899704521086343,
-    "n_features_kept": 54,
-    "n_candidate_features": 63,
-    "n_categorical_features": 9,
+    "val_auc": 0.758533224737726,
+    "val_auc_ci95_bootstrap": [
+      0.7522072681582969,
+      0.765530528548522
+    ],
+    "val_ks": 0.3883914024511387,
+    "val_gini": 0.517066449475452,
+    "pred_corr_vs_sklearn": 0.9999989506337837,
+    "coef_diff_max_vs_sklearn": 0.001222940255121355,
+    "n_candidate_features": 62,
+    "n_categorical_features": 8,
+    "n_after_iv_screen": 53,
+    "n_after_correlation_gate": 49,
+    "n_features_kept": 37,
+    "correlation_gate_dropped": [
+      {
+        "dropped": "INSTAL_SHORTFALL_SUM",
+        "kept": "INSTAL_SHORTFALL_MEAN",
+        "r": 0.9273661256262989
+      },
+      {
+        "dropped": "REGION_RATING_CLIENT",
+        "kept": "REGION_RATING_CLIENT_W_CITY",
+        "r": 0.9447398958362355
+      },
+      {
+        "dropped": "PREV_AMT_CREDIT_MEAN",
+        "kept": "PREV_AMT_APPLICATION_MEAN",
+        "r": 0.9142634636584842
+      },
+      {
+        "dropped": "BUREAU_OVERDUE_MEAN",
+        "kept": "BUREAU_OVERDUE_MAX",
+        "r": 0.9999999999999999
+      }
+    ],
+    "sign_gate_removed": [
+      {
+        "feature": "BUREAU_OVERDUE_MAX",
+        "coefficient_at_removal": 0.11873426009394551
+      },
+      {
+        "feature": "BUREAU_DAYS_CREDIT_MIN",
+        "coefficient_at_removal": 0.11545638855196078
+      },
+      {
+        "feature": "AMT_CREDIT",
+        "coefficient_at_removal": 0.09967290060132554
+      },
+      {
+        "feature": "PREV_APP_COUNT",
+        "coefficient_at_removal": 0.07488096047453259
+      },
+      {
+        "feature": "PREV_DAYS_DECISION_MAX",
+        "coefficient_at_removal": 0.06295018110798413
+      },
+      {
+        "feature": "AGE_YEARS",
+        "coefficient_at_removal": 0.050233445994728114
+      },
+      {
+        "feature": "BUREAU_COUNT",
+        "coefficient_at_removal": 0.034913934378588404
+      },
+      {
+        "feature": "NAME_INCOME_TYPE",
+        "coefficient_at_removal": 0.030669451502038553
+      },
+      {
+        "feature": "PREV_AMT_APPLICATION_MEAN",
+        "coefficient_at_removal": 0.024017811310903213
+      },
+      {
+        "feature": "AMT_INCOME_TOTAL",
+        "coefficient_at_removal": 0.014032640827573198
+      },
+      {
+        "feature": "POS_DPD_MEAN",
+        "coefficient_at_removal": 0.010905464924435667
+      },
+      {
+        "feature": "EXT_SOURCE_COUNT",
+        "coefficient_at_removal": 0.0037005843127085394
+      }
+    ],
+    "all_coefficients_negative": true,
+    "n_numeric_features_monotonic_woe": 11,
+    "n_numeric_features_kept": 32,
     "n_validation_rows": 61503,
-    "point_biserial_score_vs_default": -0.26112539376265326,
-    "score_min": 300.0,
-    "score_max": 647.5239669266938,
-    "mean_score_repaid": 455.3197401929445,
-    "mean_score_defaulted": 399.77333575383165,
-    "scorecard_base_points": 427.46405815889153,
-    "scorecard_factor": 57.70780163555854
+    "train_bad_rate": 0.08072908198107379,
+    "val_bad_rate": 0.08072776937710356,
+    "intercept_balanced": -0.0054159833872083896,
+    "intercept_prior_corrected": -2.4378979769671103,
+    "implied_odds_at_base_score": 20.000000000000007,
+    "observed_odds_near_base_score": {
+      "score_band": [
+        580,
+        620
+      ],
+      "n": 16270,
+      "good_to_bad": 20.521164021164022
+    },
+    "base_points_implied_odds": 11.448949475965676,
+    "train_good_to_bad_odds": 11.38710976837865,
+    "mean_predicted_pd_val": 0.0801582393004484,
+    "calibration_by_decile": [
+      {
+        "decile": 0,
+        "n": 6151,
+        "mean_predicted_pd": 0.011624787,
+        "observed_default_rate": 0.0131685905,
+        "gap": -0.0015438035
+      },
+      {
+        "decile": 1,
+        "n": 6150,
+        "mean_predicted_pd": 0.0202180044,
+        "observed_default_rate": 0.0190243902,
+        "gap": 0.0011936142
+      },
+      {
+        "decile": 2,
+        "n": 6150,
+        "mean_predicted_pd": 0.0281679021,
+        "observed_default_rate": 0.0271544715,
+        "gap": 0.0010134306
+      },
+      {
+        "decile": 3,
+        "n": 6150,
+        "mean_predicted_pd": 0.0368850283,
+        "observed_default_rate": 0.0339837398,
+        "gap": 0.0029012885
+      },
+      {
+        "decile": 4,
+        "n": 6151,
+        "mean_predicted_pd": 0.0474123088,
+        "observed_default_rate": 0.0461713543,
+        "gap": 0.0012409546
+      },
+      {
+        "decile": 5,
+        "n": 6150,
+        "mean_predicted_pd": 0.06073376,
+        "observed_default_rate": 0.0590243902,
+        "gap": 0.0017093698
+      },
+      {
+        "decile": 6,
+        "n": 6150,
+        "mean_predicted_pd": 0.0788365334,
+        "observed_default_rate": 0.0795121951,
+        "gap": -0.0006756618
+      },
+      {
+        "decile": 7,
+        "n": 6150,
+        "mean_predicted_pd": 0.105099691,
+        "observed_default_rate": 0.1120325203,
+        "gap": -0.0069328293
+      },
+      {
+        "decile": 8,
+        "n": 6150,
+        "mean_predicted_pd": 0.1488069646,
+        "observed_default_rate": 0.1486178862,
+        "gap": 0.0001890784
+      },
+      {
+        "decile": 9,
+        "n": 6151,
+        "mean_predicted_pd": 0.2637840236,
+        "observed_default_rate": 0.2685742156,
+        "gap": -0.0047901919
+      }
+    ],
+    "calibration_max_abs_gap": 0.006932829316745007,
+    "default_rate_by_score_decile": [
+      {
+        "decile": 0,
+        "n": 6151,
+        "score_min": 401.3720007483,
+        "score_max": 513.7150229469,
+        "default_rate": 0.2685742156
+      },
+      {
+        "decile": 1,
+        "n": 6150,
+        "score_min": 513.7156495048,
+        "score_max": 540.7208686383,
+        "default_rate": 0.1486178862
+      },
+      {
+        "decile": 2,
+        "n": 6150,
+        "score_min": 540.728480453,
+        "score_max": 560.4721034716,
+        "default_rate": 0.1120325203
+      },
+      {
+        "decile": 3,
+        "n": 6150,
+        "score_min": 560.4735253182,
+        "score_max": 577.6964676453,
+        "default_rate": 0.0795121951
+      },
+      {
+        "decile": 4,
+        "n": 6151,
+        "score_min": 577.6965597488,
+        "score_max": 592.8668868757,
+        "default_rate": 0.0590147943
+      },
+      {
+        "decile": 5,
+        "n": 6150,
+        "score_min": 592.8701138656,
+        "score_max": 607.8845700699,
+        "default_rate": 0.0461788618
+      },
+      {
+        "decile": 6,
+        "n": 6150,
+        "score_min": 607.8848422137,
+        "score_max": 623.1756836563,
+        "default_rate": 0.0339837398
+      },
+      {
+        "decile": 7,
+        "n": 6150,
+        "score_min": 623.1757575224,
+        "score_max": 640.4980159541,
+        "default_rate": 0.0271544715
+      },
+      {
+        "decile": 8,
+        "n": 6150,
+        "score_min": 640.5010455685,
+        "score_max": 663.8064153302,
+        "default_rate": 0.0190243902
+      },
+      {
+        "decile": 9,
+        "n": 6151,
+        "score_min": 663.8077304262,
+        "score_max": 791.2609908234,
+        "default_rate": 0.0131685905
+      }
+    ],
+    "default_rate_lowest_decile": 0.2685742155747033,
+    "default_rate_highest_decile": 0.013168590473093806,
+    "psi_train_to_holdout_scores": 0.00017457642484945097,
+    "point_biserial_score_vs_default": -0.2591224645209058,
+    "score_min": 401.3720007482617,
+    "score_max": 791.2609908233668,
+    "share_clipped_at_300": 0.0,
+    "share_clipped_at_850": 0.0,
+    "mean_score_repaid": 595.0649302148897,
+    "mean_score_defaulted": 540.6305688314566,
+    "scorecard_base_points": 567.8086090670529,
+    "scorecard_factor": 57.70780163555854,
+    "scorecard_offset": 427.1228762045055,
+    "example_declined_applicant": {
+      "holdout_row": 156963,
+      "outcome": "defaulted",
+      "score": 533.0831692253834,
+      "cut_off_score_at_80pct_approval": 540.7284804530079,
+      "reasons_points_below_best_bin": [
+        {
+          "feature": "EXT_SOURCE_3",
+          "points": 57.76342621104526
+        },
+        {
+          "feature": "NAME_EDUCATION_TYPE",
+          "points": 40.99084189650893
+        },
+        {
+          "feature": "EXT_SOURCE_MEAN",
+          "points": 27.480723899055512
+        }
+      ]
+    },
+    "reg_b_age_62_plus": {
+      "age_feature_in_scorecard": false,
+      "bins_covering_62_plus": {},
+      "min_points_62_plus": null,
+      "passed": true
+    },
+    "employed_years_missing_bin_points": 8.186616849670996,
+    "solver": {
+      "n_iter": 648,
+      "max_iter": 3000,
+      "tol": 1e-10,
+      "converged": true,
+      "final_cost_change": 9.875122941593872e-11
+    },
+    "prohibited_basis_ablation": {
+      "val_auc_sklearn_final_features": 0.7585335738510156,
+      "val_auc_sklearn_with_prohibited_bases": 0.7598309643324845,
+      "prohibited_bases_iv": {
+        "CODE_GENDER": 0.038433958519654386,
+        "NAME_FAMILY_STATUS": 0.02334213450906123
+      }
+    }
   },
-  "notes": "Home Credit Default Risk, 8 relational tables. Validation is a holdout split, not the Kaggle test set, so these figures are not leaderboard scores. coef_diff_max_vs_sklearn is expected to be larger on the full selected feature set than on a small clean one; that is multicollinearity among near-duplicate selected features, not a solver defect."
+  "notes": "Home Credit Default Risk, 8 relational tables. Validation is a random stratified 20% holdout, not the Kaggle test set, so these figures are not leaderboard scores. Scores use the prior-corrected intercept, so 600 points corresponds to 20:1 good:bad odds. The prohibited-basis ablation is a documentation check; sex and marital status never enter the scorecard."
 }
