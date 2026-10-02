@@ -1,42 +1,45 @@
 """
-Week 8: relational aggregation, own design, from scratch.
+Relational aggregation: rolls each linked table up to one row per SK_ID_CURR so
+it can be joined onto the application table. Only the aggregated columns are
+read, and dtypes are narrowed where it matters (installments_payments.csv alone
+is about 690 MB and 13.6 million rows).
 
-Everything below rolls a table keyed at a finer grain (per bureau record,
-per previous application, per monthly balance snapshot) up to one row per
-SK_ID_CURR, so it can be joined onto the application table. Only usecols
-that actually get aggregated are read, and dtypes are narrowed on read --
-these files are large (installments_payments.csv alone is 690MB / 13.6M
-rows) and there's no reason to pay for a float64 column of a 0/1 flag.
+Feature choices:
+- bureau.csv (credit reported by other lenders): count of records, share still
+  active, overdue-day statistics and credit-sum totals. This is the largest
+  information source the application form does not have.
+- bureau_balance.csv (monthly status per bureau record): STATUS '1' to '5' means
+  some days past due; 'C', 'X' and '0' mean closed, unknown or current. Rolled up
+  to "was this record ever delinquent" and "months of history", then joined
+  through bureau.csv (bureau_balance carries no SK_ID_CURR).
+- previous_application.csv (the applicant's history with Home Credit): count,
+  approval and refusal shares, amounts, and recency of the last decision.
+- POS_CASH_balance.csv and credit_card_balance.csv: days-past-due statistics and
+  card utilisation.
+- installments_payments.csv: days late and payment shortfall per instalment,
+  the most direct record of whether the applicant paid on time.
 
-Feature choices and why (decision log for this step):
-- bureau.csv (credit history reported to Home Credit by *other* lenders):
-  count of records, share still "Active", overdue-day stats, and credit-sum
-  stats. Bureau history is the single biggest information source Week 6/7
-  didn't have access to -- this is where the AUC lift, if any, should come
-  from.
-- bureau_balance.csv (monthly delinquency status per bureau record): STATUS
-  in {'1'..'5'} means some degree of days-past-due; {'C','X','0'} mean
-  closed/unknown/no-DPD-that-month. Rolled up to "was this bureau record
-  ever delinquent" and "how many months of history exist", then joined
-  through bureau.csv up to SK_ID_CURR (bureau_balance itself doesn't carry
-  SK_ID_CURR).
-- previous_application.csv (the applicant's own history with Home Credit):
-  count, approval/refusal share, and recency of the last decision.
-- POS_CASH_balance.csv / credit_card_balance.csv: days-past-due (SK_DPD)
-  stats -- direct behavioral signal of whether this applicant has actually
-  missed payments before, which is a stronger signal than anything on the
-  application form.
-- installments_payments.csv: payment timeliness (days late) and payment
-  shortfall (paid less than owed) per installment, aggregated per applicant.
-  This is the most direct "did they actually pay on time" signal in the
-  whole dataset.
+The full build reads about 2.5 GB of CSV, so load_relational_features caches the
+result as a parquet file next to this module, together with a fingerprint of the
+aggregation code and the input file sizes. A cache whose fingerprint does not
+match is rebuilt, never used silently.
 """
+import hashlib
+import inspect
+import json
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-DATA_DIR = Path(__file__).resolve().parents[1] / "data"
+from io_raw import DATA_DIR
+
+CACHE_PATH = Path(__file__).resolve().parent / "_cache_relational_features.parquet"
+CACHE_META_PATH = CACHE_PATH.with_suffix(".json")
+SOURCE_TABLES = [
+    "bureau.csv", "bureau_balance.csv", "previous_application.csv",
+    "POS_CASH_balance.csv", "credit_card_balance.csv", "installments_payments.csv",
+]
 
 
 def _bureau_balance_agg() -> pd.DataFrame:
@@ -156,13 +159,57 @@ def build_all_relational_features() -> pd.DataFrame:
     return out
 
 
-if __name__ == "__main__":
+def cache_fingerprint(data_dir: Path = None) -> str:
+    """SHA-256 of the aggregation code plus the name and size of each input table.
+
+    Editing any aggregation function or replacing a CSV changes the fingerprint,
+    which forces a rebuild instead of a silent read of stale features.
+    """
+    data_dir = Path(data_dir) if data_dir is not None else DATA_DIR
+    funcs = [_bureau_balance_agg, bureau_features, previous_application_features,
+             pos_cash_features, credit_card_features, installments_features,
+             build_all_relational_features]
+    h = hashlib.sha256()
+    for f in funcs:
+        h.update(inspect.getsource(f).encode("utf-8"))
+    for name in SOURCE_TABLES:
+        path = data_dir / name
+        size = path.stat().st_size if path.exists() else -1
+        h.update(f"{name}:{size}".encode("utf-8"))
+    return h.hexdigest()
+
+
+def load_relational_features(verbose: bool = True) -> pd.DataFrame:
+    """Return the relational feature table, from a validated cache or rebuilt.
+
+    Prints which path was taken. When a cache exists but cannot be validated,
+    the rebuilt table is compared with it and the comparison is printed.
+    """
+    expected = cache_fingerprint()
+    if CACHE_PATH.exists() and CACHE_META_PATH.exists():
+        meta = json.loads(CACHE_META_PATH.read_text(encoding="utf-8"))
+        if meta.get("fingerprint") == expected:
+            if verbose:
+                print(f"relational features: cache (fingerprint {expected[:12]} matches)")
+            return pd.read_parquet(CACHE_PATH)
+
+    stale = pd.read_parquet(CACHE_PATH) if CACHE_PATH.exists() else None
     feats = build_all_relational_features()
+    if verbose:
+        print(f"relational features: rebuilt from the CSVs (fingerprint {expected[:12]})")
+        if stale is not None:
+            same = (stale.shape == feats.shape and list(stale.columns) == list(feats.columns)
+                    and stale.sort_values("SK_ID_CURR").reset_index(drop=True)
+                    .equals(feats.sort_values("SK_ID_CURR").reset_index(drop=True)))
+            print(f"  previous unvalidated cache {'matches' if same else 'DIFFERS FROM'} the rebuilt table")
+    feats.to_parquet(CACHE_PATH, index=False)
+    CACHE_META_PATH.write_text(json.dumps({"fingerprint": expected}, indent=2), encoding="utf-8")
+    return feats
+
+
+if __name__ == "__main__":
+    feats = load_relational_features()
     print("relational feature table:", feats.shape)
     print("columns:", list(feats.columns))
     print("\nmissing-value share (applicants with no history in that table are legitimately NaN):")
     print((feats.isna().mean() * 100).round(1))
-
-    cache_path = Path(__file__).resolve().parent / "_cache_relational_features.parquet"
-    feats.to_parquet(cache_path, index=False)
-    print(f"\ncached to {cache_path.name} (gitignored, regenerate anytime by re-running this script)")

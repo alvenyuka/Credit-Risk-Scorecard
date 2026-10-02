@@ -1,5 +1,5 @@
 """
-Week 7: Weight of Evidence and Information Value, from scratch.
+Weight of Evidence and Information Value, implemented from first principles.
 
 Convention used (the standard credit-scoring one):
     WoE_bin = ln( dist_good_bin / dist_bad_bin )
@@ -21,6 +21,10 @@ own label distribution into its own bins.
 Zero-count bins would send WoE to +/-inf (log of 0). Laplace-style smoothing
 (epsilon added to both good and bad counts) avoids that without distorting
 well-populated bins much.
+
+The WoE table of a continuous feature is kept in bin order (lowest edge first,
+Missing last), so it can be read and checked for monotonicity directly;
+monotonicity_report summarises that check per feature.
 """
 import numpy as np
 import pandas as pd
@@ -29,10 +33,8 @@ MISSING_LABEL = "Missing"
 
 
 def fit_continuous_bins(x: pd.Series, n_bins: int = 10) -> np.ndarray:
-    # always float64: a low-cardinality integer column (e.g. a 0/1 flag) can
-    # make np.quantile / np.array return an int array, and an int array
-    # can't hold -inf, which crashed here on DAYS_EMPLOYED_ANOM the first
-    # time this ran end to end.
+    # Always float64: a low-cardinality integer column (for example a 0/1 flag)
+    # can make np.quantile return an int array, which cannot hold -inf.
     finite = x.dropna().astype(float)
     edges = np.unique(np.quantile(finite, np.linspace(0, 1, n_bins + 1))).astype(float)
     if len(edges) < 3:
@@ -66,6 +68,8 @@ def fit_woe(x: pd.Series, y: pd.Series, is_categorical: bool = False,
     total_bad = int((df["y"] == 1).sum())
 
     grouped = df.groupby("bin", observed=True)["y"].agg(n="count", bad="sum")
+    if not is_categorical:
+        grouped = grouped.loc[_ordered_labels(grouped.index, edges)]
     grouped["good"] = grouped["n"] - grouped["bad"]
 
     n_bins_actual = len(grouped)
@@ -80,6 +84,45 @@ def fit_woe(x: pd.Series, y: pd.Series, is_categorical: bool = False,
         "table": grouped,
         "iv": float(grouped["iv_contrib"].sum()),
     }
+
+
+def _ordered_labels(labels, edges) -> list:
+    """Continuous bin labels in edge order, with Missing last."""
+    interval_labels = pd.cut(pd.Series(edges[1:]), bins=edges, include_lowest=True).astype(str).tolist()
+    present = set(labels)
+    ordered = [lab for lab in dict.fromkeys(interval_labels) if lab in present]
+    ordered += sorted(lab for lab in present if lab not in ordered)
+    return ordered
+
+
+def is_monotonic_woe(fit_result: dict) -> bool | None:
+    """True when WoE moves in one direction across the ordered numeric bins.
+
+    The Missing bin is excluded, since it has no position on the scale.
+    Returns None for categorical features, which have no natural order.
+    """
+    if fit_result["is_categorical"]:
+        return None
+    woe = fit_result["table"]["woe"].drop(MISSING_LABEL, errors="ignore").to_numpy()
+    if len(woe) < 2:
+        return True
+    diffs = np.diff(woe)
+    return bool((diffs >= 0).all() or (diffs <= 0).all())
+
+
+def monotonicity_report(woe_fits: dict, cols: list) -> pd.DataFrame:
+    """One row per feature: type, number of bins, IV and whether WoE is monotonic."""
+    rows = []
+    for c in cols:
+        fit = woe_fits[c]
+        rows.append({
+            "feature": c,
+            "type": "categorical" if fit["is_categorical"] else "numeric",
+            "n_bins": int(len(fit["table"])),
+            "iv": fit["iv"],
+            "monotonic_woe": is_monotonic_woe(fit),
+        })
+    return pd.DataFrame(rows)
 
 
 def transform_woe(x: pd.Series, fit_result: dict) -> pd.Series:

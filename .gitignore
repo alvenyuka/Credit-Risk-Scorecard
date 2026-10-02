@@ -3,10 +3,15 @@ output/*.npz
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
-*.parquet
 
-# Local pipeline run artefacts. outputs/results.json IS committed -- it is the
-# single source of every number the README quotes -- but the run log is not.
+# Large or regenerable local artefacts: the relational-feature cache and its
+# fingerprint, and outputs/val_scores.parquet (holdout scores reused by
+# make_figures.py and business_impact.py).
+*.parquet
+src/_cache_relational_features.json
+
+# Local pipeline run artefacts. outputs/results.json IS committed: it is the
+# single source of every number the README quotes. The run log is not.
 outputs_run.log
 
 .pytest_cache/

@@ -1,25 +1,17 @@
 """
-Week 6 blind rebuild, step 3: naive sklearn logistic regression baseline.
-
-Goal here isn't a good model -- it's a correct, honest number to improve on
-in Week 7 once WoE/IV replaces this crude impute+scale+one-hot pipeline.
+Application-only baseline: a scikit-learn logistic regression on imputed, scaled
+and one-hot-encoded features. It sets the floor that the WoE scorecard has to beat.
 
 Pipeline choices:
-- Median imputation for numeric NaNs (mean would be pulled around by the
-  skewed AMT_* columns).
-- StandardScaler because raw features are on wildly different scales
-  (AGE_YEARS ~20-70 vs CREDIT_INCOME_RATIO ~0-20) and plain LogisticRegression
-  is scale-sensitive.
-- OneHotEncoder(handle_unknown="ignore") for categoricals so the held-out
-  split doesn't blow up on a category the train split didn't see.
-- class_weight="balanced": TARGET is ~92/8, and an unweighted LR would just
-  learn to always predict "no default" and still look 92% accurate. AUC is
-  the metric that matters here, not accuracy, but balanced weighting still
-  helps the decision boundary actually separate the classes instead of
-  collapsing toward the majority class.
+- Median imputation for numeric NaNs (the AMT_* columns are skewed, so a mean
+  would be pulled around).
+- StandardScaler, because raw features sit on very different scales and plain
+  logistic regression is scale-sensitive.
+- OneHotEncoder(handle_unknown="ignore"), so a category unseen in training does
+  not break scoring of the holdout.
+- class_weight="balanced": TARGET is about 92/8, and AUC rather than accuracy is
+  the metric that matters.
 """
-import numpy as np
-import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
@@ -28,16 +20,11 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
-from baseline_features import BASE_NUMERIC_COLS, CATEGORICAL_COLS, engineer_baseline
+from baseline_features import engineer_baseline
+from feature_lists import BASELINE_NUMERIC, CATEGORICAL_COLS
 from io_raw import load_application
 
-ENGINEERED_NUMERIC = [
-    "AGE_YEARS", "DAYS_EMPLOYED_ANOM", "EMPLOYED_YEARS",
-    "CREDIT_INCOME_RATIO", "ANNUITY_INCOME_RATIO", "CREDIT_TERM",
-    "CREDIT_GOODS_RATIO", "INCOME_PER_FAM_MEMBER",
-    "EXT_SOURCE_MEAN", "EXT_SOURCE_STD", "EXT_SOURCE_COUNT",
-]
-NUMERIC_COLS = BASE_NUMERIC_COLS + ENGINEERED_NUMERIC
+NUMERIC_COLS = BASELINE_NUMERIC
 
 
 def build_pipeline() -> Pipeline:
@@ -71,11 +58,8 @@ def main():
     pipe = build_pipeline()
     pipe.fit(X_train, y_train)
 
-    val_pred = pipe.predict_proba(X_val)[:, 1]
-    auc = roc_auc_score(y_val, val_pred)
-
-    train_pred = pipe.predict_proba(X_train)[:, 1]
-    train_auc = roc_auc_score(y_train, train_pred)
+    auc = roc_auc_score(y_val, pipe.predict_proba(X_val)[:, 1])
+    train_auc = roc_auc_score(y_train, pipe.predict_proba(X_train)[:, 1])
 
     print(f"train AUC: {train_auc:.4f}")
     print(f"val   AUC: {auc:.4f}")

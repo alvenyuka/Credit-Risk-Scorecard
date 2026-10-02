@@ -1,13 +1,19 @@
 """
-Week 7: logistic regression via batch gradient descent, from scratch.
+Logistic regression by batch gradient descent, implemented from first principles.
 
-L2-regularized cross-entropy, intercept excluded from the penalty (standard
-practice -- there's no reason to shrink the baseline log-odds toward zero,
-only the feature weights). Features are expected to be pre-standardized by
-the caller (WoE values are already on a comparable log-odds-ish scale, but
-gradient descent still converges far more reliably with zero-mean/unit-
-variance inputs than without).
+L2-regularised cross-entropy with the intercept excluded from the penalty
+(standard practice: only the feature weights are shrunk, not the baseline
+log-odds). Features are expected to be standardised by the caller; WoE values
+are already on a comparable scale, but gradient descent converges far more
+reliably on zero-mean, unit-variance inputs.
+
+After fit, n_iter_ holds the number of iterations run, converged_ whether the
+change in cost fell below tol before n_iter ran out, and final_cost_change_ the
+last change in cost. A fit that stops on the iteration limit issues a
+RuntimeWarning instead of passing silently.
 """
+import warnings
+
 import numpy as np
 
 
@@ -26,6 +32,9 @@ class FromScratchLogisticRegression:
         self.coef_ = None       # shape (n_features,)
         self.intercept_ = None  # scalar
         self.cost_history_ = []
+        self.n_iter_ = None
+        self.converged_ = None
+        self.final_cost_change_ = None
 
     def _cost(self, X, y, w, b, sw):
         z = X @ w + b
@@ -61,6 +70,9 @@ class FromScratchLogisticRegression:
         b = 0.0
         prev_cost = np.inf
         sw_sum = sample_weight.sum()
+        self.cost_history_ = []  # a refit starts a fresh history
+        converged = False
+        i = -1
 
         for i in range(self.n_iter):
             z = X @ w + b
@@ -77,6 +89,7 @@ class FromScratchLogisticRegression:
             self.cost_history_.append(cost)
 
             if abs(prev_cost - cost) < self.tol:
+                converged = True
                 if self.verbose:
                     print(f"converged at iter {i}, cost={cost:.6f}")
                 break
@@ -84,6 +97,16 @@ class FromScratchLogisticRegression:
 
         self.coef_ = w
         self.intercept_ = b
+        self.n_iter_ = i + 1
+        self.converged_ = converged
+        hist = self.cost_history_
+        self.final_cost_change_ = float(abs(hist[-2] - hist[-1])) if len(hist) > 1 else None
+        if not converged:
+            warnings.warn(
+                f"gradient descent stopped at the iteration limit ({self.n_iter}) before the "
+                f"change in cost fell below tol={self.tol:g}; last change {self.final_cost_change_:.3g}",
+                RuntimeWarning, stacklevel=2,
+            )
         return self
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
@@ -108,21 +131,21 @@ if __name__ == "__main__":
     # sklearn fit against a near-zero l2 here, since the point is to check
     # the optimization is correct, not to match a specific penalty strength.
     sk = LogisticRegression(C=np.inf, max_iter=5000).fit(X, y)
-    mine = FromScratchLogisticRegression(lr=0.5, n_iter=5000, l2=1e-6).fit(X, y)
+    scratch = FromScratchLogisticRegression(lr=0.5, n_iter=5000, l2=1e-6).fit(X, y)
 
     sk_pred = sk.predict_proba(X)[:, 1]
-    my_pred = mine.predict_proba(X)
+    scratch_pred = scratch.predict_proba(X)
 
     sk_auc = roc_auc_score(y, sk_pred)
-    my_auc = roc_auc_score(y, my_pred)
-    coef_diff = np.max(np.abs(sk.coef_.ravel() - mine.coef_))
-    pred_corr = np.corrcoef(sk_pred, my_pred)[0, 1]
+    scratch_auc = roc_auc_score(y, scratch_pred)
+    coef_diff = np.max(np.abs(sk.coef_.ravel() - scratch.coef_))
+    pred_corr = np.corrcoef(sk_pred, scratch_pred)[0, 1]
 
     print(f"sklearn AUC : {sk_auc:.6f}")
-    print(f"scratch AUC : {my_auc:.6f}")
+    print(f"scratch AUC : {scratch_auc:.6f}")
     print(f"max |coef diff|: {coef_diff:.4f}")
     print(f"prediction correlation: {pred_corr:.6f}")
 
-    assert abs(sk_auc - my_auc) < 1e-3, "AUC should match sklearn closely on a clean, low-collinearity set"
+    assert abs(sk_auc - scratch_auc) < 1e-3, "AUC should match sklearn closely on a clean, low-collinearity set"
     assert coef_diff < 0.05, "coefficients should be tight on a small, low-collinearity feature set"
     print("validation passed: from-scratch LR matches sklearn on a clean feature set")

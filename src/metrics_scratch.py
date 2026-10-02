@@ -1,5 +1,6 @@
 """
-Week 7: AUC, GINI, KS, PSI, all from scratch.
+AUC, GINI, KS and PSI implemented from first principles, plus the decile,
+calibration and bootstrap summaries reported for the final scorecard.
 
 AUC via the rank-sum (Mann-Whitney U) identity instead of numerically
 integrating the ROC curve:
@@ -20,27 +21,24 @@ PSI: bins the *reference* distribution (e.g. train scores) into deciles, then
 checks how much a second population's (val/test/OOT) share in each decile has
 drifted. <0.1 stable, 0.1-0.25 moderate drift worth watching, >0.25 the model
 likely needs review before being trusted on the new population.
+
+Deciles are formed on rank (ties broken by position), so a block of tied
+scores never collapses two deciles into one.
 """
 import numpy as np
 import pandas as pd
 
 
 def _average_rank(x: np.ndarray) -> np.ndarray:
-    order = np.argsort(x, kind="mergesort")
-    ranks = np.empty(len(x), dtype=float)
-    ranks[order] = np.arange(1, len(x) + 1)
+    """1-based ranks with tied values sharing the mean of the ranks they span.
 
-    sorted_x = x[order]
-    i = 0
-    while i < len(x):
-        j = i
-        while j + 1 < len(x) and sorted_x[j + 1] == sorted_x[i]:
-            j += 1
-        if j > i:
-            tie_positions = order[i:j + 1]
-            ranks[tie_positions] = ranks[tie_positions].mean()
-        i = j + 1
-    return ranks
+    For each distinct value, the tie block ends at the cumulative count of all
+    values up to and including it, so its average rank is end - (count - 1) / 2.
+    """
+    x = np.asarray(x, dtype=float)
+    _, inverse, counts = np.unique(x, return_inverse=True, return_counts=True)
+    ends = np.cumsum(counts)
+    return (ends - (counts - 1) / 2.0)[inverse]
 
 
 def auc_rank_sum(y_true, y_score) -> float:
@@ -105,6 +103,50 @@ def psi(expected: np.ndarray, actual: np.ndarray, n_bins: int = 10) -> float:
     return float(np.sum((actual_pct - expected_pct) * np.log(actual_pct / expected_pct)))
 
 
+def score_deciles(scores) -> np.ndarray:
+    """Decile index 0..9 for each score, lowest scores in decile 0."""
+    scores = pd.Series(np.asarray(scores, dtype=float))
+    return pd.qcut(scores.rank(method="first"), 10, labels=False).to_numpy()
+
+
+def default_rate_by_score_decile(scores, defaulted) -> pd.DataFrame:
+    """Observed default rate in each score decile, lowest scores first."""
+    scores = np.asarray(scores, dtype=float)
+    df = pd.DataFrame({"decile": score_deciles(scores), "score": scores,
+                       "default": np.asarray(defaulted, dtype=float)})
+    out = df.groupby("decile").agg(n=("default", "size"), score_min=("score", "min"),
+                                   score_max=("score", "max"), default_rate=("default", "mean"))
+    return out.reset_index()
+
+
+def calibration_by_decile(predicted_pd, defaulted) -> pd.DataFrame:
+    """Mean predicted PD against the observed default rate in each PD decile,
+    lowest predicted risk first."""
+    p = np.asarray(predicted_pd, dtype=float)
+    df = pd.DataFrame({"decile": score_deciles(p), "pd": p,
+                       "default": np.asarray(defaulted, dtype=float)})
+    out = df.groupby("decile").agg(n=("default", "size"), mean_predicted_pd=("pd", "mean"),
+                                   observed_default_rate=("default", "mean"))
+    out["gap"] = out["mean_predicted_pd"] - out["observed_default_rate"]
+    return out.reset_index()
+
+
+def bootstrap_auc_ci(y_true, y_score, n_boot: int = 500, seed: int = 42,
+                     level: float = 0.95) -> tuple:
+    """Percentile bootstrap confidence interval for AUC (resampling rows with replacement)."""
+    y_true = np.asarray(y_true)
+    y_score = np.asarray(y_score, dtype=float)
+    rng = np.random.default_rng(seed)
+    n = len(y_true)
+    boot = np.empty(n_boot)
+    for b in range(n_boot):
+        idx = rng.integers(0, n, n)
+        boot[b] = auc_rank_sum(y_true[idx], y_score[idx])
+    tail = (1 - level) / 2 * 100
+    lo, hi = np.percentile(boot, [tail, 100 - tail])
+    return float(lo), float(hi)
+
+
 if __name__ == "__main__":
     from sklearn.metrics import roc_auc_score
     from scipy.stats import ks_2samp
@@ -115,19 +157,19 @@ if __name__ == "__main__":
     score = rng.normal(0, 1, n) + y * 0.8  # score correlated with label, some ties from rounding
     score = np.round(score, 2)
 
-    my_auc = auc_rank_sum(y, score)
+    scratch_auc = auc_rank_sum(y, score)
     sk_auc = roc_auc_score(y, score)
-    print(f"AUC   scratch={my_auc:.6f}  sklearn={sk_auc:.6f}  diff={abs(my_auc - sk_auc):.2e}")
-    assert abs(my_auc - sk_auc) < 1e-9, "AUC should match sklearn to floating-point precision"
+    print(f"AUC   scratch={scratch_auc:.6f}  sklearn={sk_auc:.6f}  diff={abs(scratch_auc - sk_auc):.2e}")
+    assert abs(scratch_auc - sk_auc) < 1e-9, "AUC should match sklearn to floating-point precision"
 
-    my_gini = gini(y, score)
-    print(f"GINI  scratch={my_gini:.6f}  (2*AUC-1)={2*sk_auc-1:.6f}")
-    assert abs(my_gini - (2 * sk_auc - 1)) < 1e-9
+    scratch_gini = gini(y, score)
+    print(f"GINI  scratch={scratch_gini:.6f}  (2*AUC-1)={2*sk_auc-1:.6f}")
+    assert abs(scratch_gini - (2 * sk_auc - 1)) < 1e-9
 
-    my_ks = ks_statistic(y, score)
+    scratch_ks = ks_statistic(y, score)
     sp_ks = ks_2samp(score[y == 1], score[y == 0]).statistic
-    print(f"KS    scratch={my_ks:.6f}  scipy ks_2samp={sp_ks:.6f}  diff={abs(my_ks - sp_ks):.2e}")
-    assert abs(my_ks - sp_ks) < 1e-9, "KS should match scipy's two-sample KS statistic"
+    print(f"KS    scratch={scratch_ks:.6f}  scipy ks_2samp={sp_ks:.6f}  diff={abs(scratch_ks - sp_ks):.2e}")
+    assert abs(scratch_ks - sp_ks) < 1e-9, "KS should match scipy's two-sample KS statistic"
 
     # PSI sanity: identical distributions -> ~0; a shifted distribution -> clearly above the 0.25 flag
     same_psi = psi(score, score)

@@ -1,57 +1,69 @@
 """
-Charts for the README, drawn from the same model that writes outputs/results.json.
+Charts for the README, drawn from the holdout scores that run_pipeline.py saves
+(outputs/val_scores.parquet), so they describe exactly the model whose metrics are
+in outputs/results.json and need no second fit.
 
 Two views a credit committee reads first: how far apart the score distributions of
 repaid and defaulted applicants sit, and how the default rate falls as the score
 rises. Writes figures/score_distribution.png and figures/default_rate_by_band.png.
+The plotting functions return the figure, so the notebook can show them inline.
 
-Run: python src/make_figures.py   (needs the 8 Home Credit CSVs in data/, ~7 minutes)
+Run: python src/run_pipeline.py, then python src/make_figures.py   (seconds)
 """
 from pathlib import Path
 
-import matplotlib
+import numpy as np
+import pandas as pd
 
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
-import numpy as np  # noqa: E402
-import pandas as pd  # noqa: E402
-
-from run_pipeline import build_validation_scores  # noqa: E402
+from metrics_scratch import default_rate_by_score_decile
 
 OUT = Path(__file__).resolve().parent.parent / "figures"
 REPAID, DEFAULTED, INK = "#2b6cb0", "#c0392b", "#2d3748"
 
 
-def score_distribution(scores, y, path):
+def _finish(fig, path):
+    import matplotlib.pyplot as plt
+
+    fig.tight_layout()
+    if path is not None:
+        fig.savefig(path, dpi=150)
+        plt.close(fig)
+    return fig
+
+
+def score_distribution(scores, y, path=None):
+    import matplotlib.pyplot as plt
+
+    scores, y = pd.Series(np.asarray(scores, dtype=float)), np.asarray(y)
     fig, ax = plt.subplots(figsize=(8, 4.2))
     bins = np.arange(np.floor(scores.min() / 10) * 10, scores.max() + 10, 10)
     ax.hist(scores[y == 0], bins=bins, density=True, alpha=0.55, color=REPAID,
             label=f"Repaid (mean {scores[y == 0].mean():.1f})")
     ax.hist(scores[y == 1], bins=bins, density=True, alpha=0.55, color=DEFAULTED,
             label=f"Defaulted (mean {scores[y == 1].mean():.1f})")
-    ax.set_xlabel("Scorecard points")
+    ax.set_xlabel("Scorecard points (600 = 20:1 good:bad odds)")
     ax.set_ylabel("Share of applicants")
     ax.set_yticks([])
     ax.set_title(f"Score distributions, {len(scores):,} held-out applicants", color=INK, loc="left")
     ax.legend(frameon=False)
     for s in ("top", "right", "left"):
         ax.spines[s].set_visible(False)
-    fig.tight_layout()
-    fig.savefig(path, dpi=150)
-    plt.close(fig)
+    return _finish(fig, path)
 
 
-def default_rate_by_band(scores, y, path):
-    bands = pd.qcut(scores, 10)
-    table = pd.DataFrame({"band": bands, "default": y.values}).groupby("band", observed=True)["default"]
-    rate = table.mean() * 100
-    labels = [f"{iv.left:.0f}-{iv.right:.0f}" for iv in rate.index]
+def default_rate_by_band(scores, y, path=None):
+    import matplotlib.pyplot as plt
+
+    y = np.asarray(y, dtype=float)
+    table = default_rate_by_score_decile(scores, y)
+    rate = table["default_rate"].to_numpy() * 100
+    labels = [f"{lo:.0f}-{hi:.0f}" for lo, hi in zip(table["score_min"], table["score_max"])]
     fig, ax = plt.subplots(figsize=(8, 4.2))
-    bars = ax.bar(range(len(rate)), rate.values, color=DEFAULTED, alpha=0.8)
+    bars = ax.bar(range(len(rate)), rate, color=DEFAULTED, alpha=0.8)
     ax.axhline(y.mean() * 100, color=INK, lw=1, ls="--")
     ax.text(len(rate) - 0.5, y.mean() * 100, f" average {y.mean() * 100:.1f}%", va="bottom",
             ha="right", color=INK, fontsize=9)
-    for b, v in zip(bars, rate.values):
+    for b, v in zip(bars, rate):
         ax.text(b.get_x() + b.get_width() / 2, v, f"{v:.1f}%", ha="center", va="bottom", fontsize=8, color=INK)
     ax.set_xticks(range(len(rate)))
     ax.set_xticklabels(labels, rotation=35, ha="right", fontsize=8)
@@ -60,18 +72,22 @@ def default_rate_by_band(scores, y, path):
     ax.set_title("Default rate falls as the score rises", color=INK, loc="left")
     for s in ("top", "right"):
         ax.spines[s].set_visible(False)
-    fig.tight_layout()
-    fig.savefig(path, dpi=150)
-    plt.close(fig)
-    return rate
+    return _finish(fig, path)
 
 
 def main():
-    _, _, _, y_val, scores = build_validation_scores()
+    import matplotlib
+
+    matplotlib.use("Agg")
+    from run_pipeline import load_validation_scores
+
+    df = load_validation_scores()
     OUT.mkdir(exist_ok=True)
-    score_distribution(scores, y_val, OUT / "score_distribution.png")
-    rate = default_rate_by_band(scores, y_val, OUT / "default_rate_by_band.png")
-    print(f"default rate, lowest score decile: {rate.iloc[0]:.1f}%  highest: {rate.iloc[-1]:.1f}%")
+    score_distribution(df["score"], df["TARGET"], OUT / "score_distribution.png")
+    default_rate_by_band(df["score"], df["TARGET"], OUT / "default_rate_by_band.png")
+    table = default_rate_by_score_decile(df["score"], df["TARGET"])
+    print(f"default rate, lowest score decile: {table['default_rate'].iloc[0]:.1%}  "
+          f"highest: {table['default_rate'].iloc[-1]:.1%}")
     print(f"wrote {OUT / 'score_distribution.png'} and {OUT / 'default_rate_by_band.png'}")
 
 

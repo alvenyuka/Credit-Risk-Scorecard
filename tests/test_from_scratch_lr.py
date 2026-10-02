@@ -50,26 +50,26 @@ def _sklearn_fit(X, y, class_weight=None):
 
 def test_coefficients_match_sklearn_on_clean_features():
     X, y = _clean_data()
-    mine = FromScratchLogisticRegression(lr=0.5, n_iter=6000, l2=1e-6).fit(X, y)
+    scratch = FromScratchLogisticRegression(lr=0.5, n_iter=6000, l2=1e-6).fit(X, y)
     theirs = _sklearn_fit(X, y)
-    max_diff = np.max(np.abs(mine.coef_ - theirs.coef_[0]))
+    max_diff = np.max(np.abs(scratch.coef_ - theirs.coef_[0]))
     assert max_diff < 0.05, f"max coefficient difference {max_diff:.4f}"
 
 
 def test_intercept_matches_sklearn():
     X, y = _clean_data()
-    mine = FromScratchLogisticRegression(lr=0.5, n_iter=6000, l2=1e-6).fit(X, y)
+    scratch = FromScratchLogisticRegression(lr=0.5, n_iter=6000, l2=1e-6).fit(X, y)
     theirs = _sklearn_fit(X, y)
-    assert mine.intercept_ == pytest.approx(theirs.intercept_[0], abs=0.05)
+    assert scratch.intercept_ == pytest.approx(theirs.intercept_[0], abs=0.05)
 
 
 def test_predictions_correlate_with_sklearn():
     """The headline claim in the README. Predictions are what the scorecard uses,
     so this matters more than coefficient agreement."""
     X, y = _clean_data()
-    mine = FromScratchLogisticRegression(lr=0.5, n_iter=6000, l2=1e-6).fit(X, y)
+    scratch = FromScratchLogisticRegression(lr=0.5, n_iter=6000, l2=1e-6).fit(X, y)
     theirs = _sklearn_fit(X, y)
-    r = np.corrcoef(mine.predict_proba(X), theirs.predict_proba(X)[:, 1])[0, 1]
+    r = np.corrcoef(scratch.predict_proba(X), theirs.predict_proba(X)[:, 1])[0, 1]
     assert r > 0.999, f"prediction correlation {r:.6f}"
 
 
@@ -77,11 +77,11 @@ def test_balanced_matches_sklearn_balanced():
     """On an 8%/92% target, the balanced fit must be compared against sklearn's
     balanced fit. This is the comparison that was wrong before."""
     X, y = _clean_data(imbalance=0.08)
-    mine = FromScratchLogisticRegression(lr=0.5, n_iter=6000, l2=1e-6).fit(
+    scratch = FromScratchLogisticRegression(lr=0.5, n_iter=6000, l2=1e-6).fit(
         X, y, class_weight="balanced"
     )
     theirs = _sklearn_fit(X, y, class_weight="balanced")
-    r = np.corrcoef(mine.predict_proba(X), theirs.predict_proba(X)[:, 1])[0, 1]
+    r = np.corrcoef(scratch.predict_proba(X), theirs.predict_proba(X)[:, 1])[0, 1]
     assert r > 0.999, f"balanced prediction correlation {r:.6f}"
 
 
@@ -110,10 +110,34 @@ def test_predict_proba_in_unit_interval():
     assert p.min() >= 0.0 and p.max() <= 1.0
 
 
+@pytest.mark.filterwarnings("ignore:gradient descent stopped")
 def test_separable_data_ranks_correctly():
     """A trivially separable problem must come out ordered correctly, regardless
-    of how large the coefficients grow."""
+    of how large the coefficients grow (it never converges, by construction)."""
     X = np.array([[-2.0], [-1.0], [1.0], [2.0]])
     y = np.array([0, 0, 1, 1])
     p = FromScratchLogisticRegression(lr=0.5, n_iter=4000, l2=1e-6).fit(X, y).predict_proba(X)
     assert p[0] < p[1] < p[2] < p[3]
+
+
+def test_refit_starts_a_fresh_cost_history():
+    X, y = _clean_data()
+    model = FromScratchLogisticRegression(lr=0.5, n_iter=200, l2=1e-6, tol=0.0)
+    with pytest.warns(RuntimeWarning):
+        model.fit(X, y)
+    first = len(model.cost_history_)
+    with pytest.warns(RuntimeWarning):
+        model.fit(X, y)
+    assert len(model.cost_history_) == first == model.n_iter_ == 200
+
+
+def test_convergence_is_recorded():
+    X, y = _clean_data()
+    converged = FromScratchLogisticRegression(lr=0.5, n_iter=20000, l2=1e-6, tol=1e-9).fit(X, y)
+    assert converged.converged_ is True
+    assert converged.n_iter_ < 20000
+    assert converged.final_cost_change_ < 1e-9
+
+    with pytest.warns(RuntimeWarning, match="iteration limit"):
+        capped = FromScratchLogisticRegression(lr=0.5, n_iter=5, l2=1e-6, tol=1e-12).fit(X, y)
+    assert capped.converged_ is False and capped.n_iter_ == 5

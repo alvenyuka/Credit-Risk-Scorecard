@@ -30,7 +30,9 @@ from woe_iv import (
     apply_continuous_bins,
     fit_continuous_bins,
     fit_woe,
+    is_monotonic_woe,
     iv_strength,
+    monotonicity_report,
     transform_woe,
 )
 
@@ -147,8 +149,8 @@ def test_binary_numeric_column_collapses_to_one_bin_with_zero_iv():
     assert len(fit["table"]) == 1
     assert fit["iv"] == pytest.approx(0.0, abs=1e-12)
 
-    # The same column read as categorical recovers the signal, which is what
-    # week8_run.py does for DAYS_EMPLOYED_ANOM and why that one survives.
+    # The same column read as categorical recovers the signal, which is why
+    # 0/1 flags are WoE-encoded by level rather than quantile-binned.
     assert fit_woe(flag, y, is_categorical=True)["iv"] > 0.3
 
 
@@ -174,3 +176,30 @@ def test_zero_inflated_column_loses_its_tail_to_the_quantile_edges():
     # Both columns are zero on exactly the same rows, so the two-bin split is
     # the same split, and the WoE encodings become perfectly collinear.
     assert (overdue_max > 0).equals(overdue_mean > 0)
+
+
+def test_numeric_bins_are_listed_in_edge_order_with_missing_last():
+    """String labels sort "(10.0, 14.6]" before "(2.5, 3.4]"; the table must not."""
+    rng = np.random.default_rng(SEED)
+    x = pd.Series(rng.gamma(2.0, 5.0, 5000))
+    x.iloc[:50] = np.nan
+    y = pd.Series(rng.binomial(1, 0.1, 5000))
+    labels = list(fit_woe(x, y, n_bins=10)["table"].index)
+    assert labels[-1] == "Missing"
+    lefts = [float(lab.split(",")[0].strip("([")) for lab in labels[:-1]]
+    assert lefts == sorted(lefts)
+
+
+def test_monotonicity_report_flags_a_monotone_and_a_u_shaped_feature():
+    rng = np.random.default_rng(SEED)
+    n = 40000
+    x = pd.Series(rng.uniform(-1, 1, n))
+    y_mono = pd.Series(rng.binomial(1, 0.05 + 0.1 * (x + 1)))
+    y_u = pd.Series(rng.binomial(1, 0.05 + 0.25 * x ** 2))
+    fits = {"mono": fit_woe(x, y_mono), "u": fit_woe(x, y_u),
+            "cat": fit_woe(pd.Series(["a", "b"] * (n // 2)), y_mono, is_categorical=True)}
+    assert is_monotonic_woe(fits["mono"]) is True
+    assert is_monotonic_woe(fits["u"]) is False
+    report = monotonicity_report(fits, ["mono", "u", "cat"]).set_index("feature")
+    assert report.loc["cat", "monotonic_woe"] is None
+    assert report.loc["mono", "type"] == "numeric"

@@ -1,7 +1,7 @@
 """
 Business impact of the scorecard: what a lender gains by using it to set a cut-off.
 
-On the 61,503 held-out applicants, approve only the highest-scoring share (100%, 90%,
+On the held-out applicants (61,503 in the published run), approve only the highest-scoring share (100%, 90%,
 80%, 70%) and measure, for each policy, the default rate among approved loans, the
 credit loss those defaults would cause, and how many good borrowers are turned away.
 
@@ -10,10 +10,13 @@ LGD is an assumption, not an output: 45%, the Basel foundation-IRB supervisory v
 for senior unsecured exposures. Home Credit does not state the currency of AMT_CREDIT,
 so amounts are in the dataset's own currency units.
 
-Writes outputs/business_impact.json, figures/lending_policy.png and, from the same fit,
-figures/iv_top15.png (the 15 selected features with the highest information value).
+Reads the holdout scores that run_pipeline.py saves (outputs/val_scores.parquet) and
+the points table (outputs/scorecard_points.json), so it describes the same fit as
+outputs/results.json without refitting. Writes outputs/business_impact.json (strict
+JSON), figures/lending_policy.png and figures/iv_top15.png (the 15 selected features
+with the highest information value).
 
-Run: python src/business_impact.py   (needs the 8 Home Credit CSVs in data/, ~7 minutes)
+Run: python src/run_pipeline.py, then python src/business_impact.py   (seconds)
 """
 import json
 from pathlib import Path
@@ -62,6 +65,11 @@ def lending_policy_table(scores, defaulted, exposure, lgd=LGD, approval_rates=AP
     return pd.DataFrame(rows)
 
 
+def policies_to_records(table: pd.DataFrame) -> list:
+    """Rows as plain dicts with missing values as None (JSON null), never NaN."""
+    return table.astype(object).where(table.notna(), None).to_dict(orient="records")
+
+
 def plot(table, path):
     import matplotlib
 
@@ -77,7 +85,8 @@ def plot(table, path):
                     ha="center", va="bottom", fontsize=9, color="#2d3748")
     ax.set_xlabel("Share of applicants approved (highest scores first)")
     ax.set_ylabel("Credit loss, billions of dataset currency units")
-    ax.set_title("Credit loss on 61,503 held-out applicants by approval policy (LGD 45%)", loc="left", fontsize=11)
+    n = int(table["approved"].max())
+    ax.set_title(f"Credit loss on {n:,} held-out applicants by approval policy (LGD 45%)", loc="left", fontsize=11)
     ax.set_ylim(0, table["credit_loss"].max() / 1e9 * 1.25)
     for s in ("top", "right"):
         ax.spines[s].set_visible(False)
@@ -86,13 +95,14 @@ def plot(table, path):
     plt.close(fig)
 
 
-def plot_iv(woe_fits, kept_cols, path, top=15):
+def plot_iv(feature_iv: dict, path, top=15):
     import matplotlib
 
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    iv = sorted(((c, woe_fits[c]["iv"]) for c in kept_cols), key=lambda t: t[1])[-top:]
+    kept_cols = list(feature_iv)
+    iv = sorted(feature_iv.items(), key=lambda t: (t[1], t[0]))[-top:]
     fig, ax = plt.subplots(figsize=(8, 5))
     ax.barh([c for c, _ in iv], [v for _, v in iv], color="#2b6cb0")
     ax.axvline(0.1, color="#718096", ls="--", lw=1)
@@ -107,10 +117,10 @@ def plot_iv(woe_fits, kept_cols, path, top=15):
 
 
 def main():
-    from run_pipeline import build_validation_scores
+    from run_pipeline import POINTS_PATH, load_validation_scores
 
-    result, _, X_val, y_val, scores = build_validation_scores()
-    table = lending_policy_table(scores.values, y_val.values, X_val["AMT_CREDIT"].values)
+    df = load_validation_scores()
+    table = lending_policy_table(df["score"].to_numpy(), df["TARGET"].to_numpy(), df["AMT_CREDIT"].to_numpy())
 
     out = ROOT / "outputs" / "business_impact.json"
     out.write_text(json.dumps({
@@ -119,13 +129,14 @@ def main():
             "lgd_basis": "Basel foundation-IRB supervisory LGD for senior unsecured exposures",
             "exposure": "AMT_CREDIT, the credit amount of the application",
             "currency": "not stated in the Home Credit data; figures are in its own currency units",
-            "population": "the 61,503-applicant holdout used for every other metric",
+            "population": f"the {len(df):,}-applicant holdout used for every other metric",
         },
-        "policies": table.to_dict(orient="records"),
-    }, indent=2))
+        "policies": policies_to_records(table),
+    }, indent=2, allow_nan=False) + "\n", encoding="utf-8")
     (ROOT / "figures").mkdir(exist_ok=True)
     plot(table, ROOT / "figures" / "lending_policy.png")
-    plot_iv(result["woe_fits"], result["kept_cols"], ROOT / "figures" / "iv_top15.png")
+    points = json.loads(POINTS_PATH.read_text(encoding="utf-8"))
+    plot_iv({f["feature"]: f["iv"] for f in points}, ROOT / "figures" / "iv_top15.png")
     print(table.to_string(index=False))
     print(f"wrote {out.relative_to(ROOT)}, figures/lending_policy.png and figures/iv_top15.png")
 

@@ -1,31 +1,23 @@
 """
-Week 6 blind rebuild, step 1: load the raw application table.
+Loads the raw Home Credit application table.
 
-Deliberately written without opening the previous pipeline's loader, which is in
-this repo's git history. The only things looked at were the raw CSV header and
-Kaggle's own description of the 8 tables (bureau, bureau_balance,
-previous_application, POS_CASH_balance, credit_card_balance,
-installments_payments, application_train/test).
+The data directory defaults to data/ at the repo root and can be pointed
+elsewhere with the HOME_CREDIT_DATA_DIR environment variable.
 """
+import os
 from pathlib import Path
+
 import pandas as pd
 
-DATA_DIR = Path(__file__).resolve().parents[1] / "data"
+DATA_DIR = Path(os.environ.get("HOME_CREDIT_DATA_DIR", Path(__file__).resolve().parents[1] / "data"))
 
 
 def load_application(split: str = "train") -> pd.DataFrame:
-    """Load application_train.csv or application_test.csv.
-
-    No dtype downcasting yet on this first pass. Get something correct and
-    running before optimizing memory. application_train.csv is ~166MB, small
-    enough to load as-is.
-    """
-    fname = f"application_{split}.csv"
-    path = DATA_DIR / fname
+    """Load application_train.csv or application_test.csv (about 166 MB, read as-is)."""
+    path = DATA_DIR / f"application_{split}.csv"
     if not path.exists():
         raise FileNotFoundError(f"expected {path}. See README.md for how to get the data")
-    df = pd.read_csv(path)
-    return df
+    return pd.read_csv(path)
 
 
 if __name__ == "__main__":

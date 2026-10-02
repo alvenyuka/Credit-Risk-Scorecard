@@ -1,0 +1,7 @@
+# What CI installs: the test suite needs no data, plotting or notebook packages.
+# Same pins as requirements.txt.
+numpy==2.4.6
+pandas==3.0.3
+scikit-learn==1.8.0
+scipy==1.17.1
+pytest==8.3.3

@@ -1,19 +1,14 @@
 """Writes every headline number the README quotes to outputs/results.json.
 
-Why this module exists
----------------------
-Before this, every metric in the README was typed in by hand. That is the exact
-failure mode this portfolio has hit before: documentation describing results the
-code never produced, discovered only when someone re-ran it. A number that is
-typed can drift from the code silently; a number that is read from a file the
-code writes cannot.
+A number typed into a README can drift from the code silently; a number read
+from a file the code writes cannot. The rule that goes with this module: the
+README and METHODOLOGY quote this file (and outputs/business_impact.json), and
+nothing else.
 
-The rule that goes with it: the README quotes this file, and nothing else. If a
-number is not in here, it does not belong in the README.
-
-Provenance is recorded alongside the metrics deliberately. "val AUC 0.7622" on
-its own is unfalsifiable. "val AUC 0.7622, from commit d74c298, real data,
-61,503 validation rows, numpy 2.x, on this date" can be checked.
+Provenance is recorded alongside the metrics: the commit, whether the data was
+real or synthetic, the Python and package versions and the time of the run, so
+any figure can be checked rather than taken on trust. The file is strict JSON
+(allow_nan=False), so any parser can read it.
 """
 from __future__ import annotations
 
@@ -41,7 +36,7 @@ def _git_commit() -> str | None:
 
 def _package_versions() -> dict:
     versions = {}
-    for name in ("numpy", "pandas", "scikit-learn", "scipy"):
+    for name in ("numpy", "pandas", "scikit-learn", "scipy", "matplotlib", "pyarrow"):
         module = {"scikit-learn": "sklearn"}.get(name, name)
         try:
             versions[name] = __import__(module).__version__
@@ -81,7 +76,7 @@ def write_results(metrics: dict, *, data_source: str = "real", notes: str | None
         payload["notes"] = notes
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT_PATH.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    OUTPUT_PATH.write_text(json.dumps(payload, indent=2, allow_nan=False) + "\n", encoding="utf-8")
     return OUTPUT_PATH
 
 
