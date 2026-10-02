@@ -163,7 +163,7 @@ docs/METHODOLOGY.md          full method, results and test descriptions
 pip install -r requirements.txt
 python -m pytest                   # 34 tests, no data needed
 # put the 8 Home Credit Default Risk CSVs from Kaggle in data/
-python src/week8_full.py           # fit, score and write outputs/results.json (about 7 minutes)
+python src/run_pipeline.py         # fit, score and write outputs/results.json (about 7 minutes)
 python src/make_figures.py         # score distribution and default rate by band
 python src/business_impact.py      # approval-policy table, lending-policy and IV charts
 ```

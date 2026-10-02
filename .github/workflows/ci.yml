@@ -28,7 +28,7 @@ jobs:
       # seed and checks the from-scratch implementations against sklearn and
       # scipy. That is deliberate: these tests verify the solver and the metric
       # formulas, which is what can break silently. The full pipeline run against
-      # the real data is a local step (python src/week8_full.py) and is what
+      # the real data is a local step (python src/run_pipeline.py) and is what
       # writes outputs/results.json.
       - name: Install dependencies
         run: |

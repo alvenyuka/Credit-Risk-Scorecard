@@ -1,6 +1,6 @@
 """Puts src/ on sys.path for the tests.
 
-Every module in src/ imports its siblings flat (`import week8_run`), and the
+Every module in src/ imports its siblings flat (`import fit_model`), and the
 notebook does `sys.path.insert(0, "src")` before importing them the same way,
 because each module is also runnable as a script. The tests follow that instead
 of importing `src.metrics_scratch` as a package.

@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
-from week8_full import build_validation_scores  # noqa: E402
+from run_pipeline import build_validation_scores  # noqa: E402
 
 OUT = Path(__file__).resolve().parent.parent / "figures"
 REPAID, DEFAULTED, INK = "#2b6cb0", "#c0392b", "#2d3748"

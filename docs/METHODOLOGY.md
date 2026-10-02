@@ -54,9 +54,9 @@ src/
   relational_features.py      bureau / previous application / payment history
   scorecard.py                the points scorecard and reason codes
   results_io.py               writes outputs/results.json; the README quotes it
-  week7_run.py                primitives validated against sklearn / scipy
-  week8_run.py                full feature set, model, metrics
-  week8_full.py               builds the scorecard, writes results.json
+  woe_baseline.py             primitives validated against sklearn / scipy
+  fit_model.py                full feature set, model, metrics
+  run_pipeline.py             builds the scorecard, writes results.json
 tests/
   test_metrics_scratch.py     AUC/GINI/KS/PSI vs sklearn and scipy
   test_from_scratch_lr.py     the solver vs sklearn, incl. class_weight
@@ -70,8 +70,8 @@ figs/                         four charts from the old pipeline, kept for the de
 .github/workflows/ci.yml      runs the tests on every push
 ```
 
-The `src/` module names carry the week they were written in, from `week7_run.py`
-through `week8_full.py`. That is the order the work happened in over two weeks of
+The `src/` module names carry the week they were written in, from `woe_baseline.py`
+through `run_pipeline.py`. That is the order the work happened in over two weeks of
 evenings, nothing more; the numbering has no meaning beyond sequence.
 
 ## Quick Start
@@ -109,7 +109,7 @@ pip install -r requirements.txt
 
 # the pipeline, against the 8 tables in data/. ~7 minutes.
 # writes outputs/results.json, which the Results section above quotes.
-python src/week8_full.py
+python src/run_pipeline.py
 
 # the notebook
 python build_notebook.py
@@ -157,7 +157,7 @@ the same fit that writes `outputs/results.json`.
 ## Results
 
 Every metric in the left-hand column is read from
-[`outputs/results.json`](../outputs/results.json), which `src/week8_full.py` writes
+[`outputs/results.json`](../outputs/results.json), which `src/run_pipeline.py` writes
 at the end of a run, so none of them is typed in by hand. That file also records
 the commit, the package versions, whether the data was real or synthetic, and the
 validation row count, so any of those figures can be checked rather than taken on

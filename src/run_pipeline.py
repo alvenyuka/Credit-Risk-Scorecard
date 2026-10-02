@@ -5,7 +5,7 @@ codes for a couple of real applicants, not just a validation-set AUC number.
 """
 import numpy as np
 
-import week8_run
+import fit_model
 from results_io import write_results
 from scorecard import build_scorecard, destandardize_coefficients, reason_codes, score_dataframe
 
@@ -16,7 +16,7 @@ def build_validation_scores():
     Shared by main() and make_figures.py so the charts describe exactly the model
     whose metrics are written to outputs/results.json.
     """
-    result = week8_run.main()
+    result = fit_model.main()
 
     coef_raw, intercept_raw = destandardize_coefficients(
         result["model"].coef_, result["model"].intercept_,

@@ -107,7 +107,7 @@ def plot_iv(woe_fits, kept_cols, path, top=15):
 
 
 def main():
-    from week8_full import build_validation_scores
+    from run_pipeline import build_validation_scores
 
     result, _, X_val, y_val, scores = build_validation_scores()
     table = lending_policy_table(scores.values, y_val.values, X_val["AMT_CREDIT"].values)

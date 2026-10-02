@@ -90,7 +90,7 @@ def read_results() -> dict:
     no number is ever transcribed by hand."""
     if not OUTPUT_PATH.exists():
         raise FileNotFoundError(
-            f"{OUTPUT_PATH} does not exist. Run `python src/week8_full.py` first; "
+            f"{OUTPUT_PATH} does not exist. Run `python src/run_pipeline.py` first; "
             "the metrics are written by the pipeline, never typed in."
         )
     return json.loads(OUTPUT_PATH.read_text(encoding="utf-8"))
