@@ -1,9 +1,9 @@
 # Credit Risk Scorecard
 
-A points-based credit scorecard for 307,511 Home Credit loan applicants, built on Weight of Evidence and a
-logistic regression written from first principles. It ranks borrowers at **AUC 0.761** and, used as an
-approval cut-off that approves the top 80% of applicants, **cuts credit losses on the holdout by 47%** while
-giving every declined applicant a specific reason.
+A credit scorecard that tells a lender which loan applicants are likely to default, and gives a specific reason
+for every decline. Tested on 61,503 past applicants it had not seen, approving only the top 80% by score would
+have **cut credit losses by 47%**. Built on 307,511 Home Credit applications with Weight of Evidence and a
+logistic regression written from first principles (**AUC 0.761**).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)](#how-to-run)
