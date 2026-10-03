@@ -193,7 +193,9 @@ python src/business_impact.py      # approval-policy table, lending-policy and I
 
 ## Documentation
 
-The walkthrough notebook is [`Credit_Risk_Scorecard.ipynb`](Credit_Risk_Scorecard.ipynb); the full method, every
+The walkthrough notebook is [`Credit_Risk_Scorecard.ipynb`](Credit_Risk_Scorecard.ipynb). It builds the scorecard in small
+numbered steps (Weight of Evidence by hand, the three feature gates, the fit, the points table), with a check after
+each step and a final check that the step-by-step build matches the tested pipeline. The full method, every
 result and the test suite are described in [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md).
 
 ## License

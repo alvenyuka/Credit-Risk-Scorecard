@@ -15,8 +15,12 @@ Evidence, a from-scratch logistic regression, and a points-based scorecard
 a loan officer can read.
 
 Start with [`Credit_Risk_Scorecard.ipynb`](../Credit_Risk_Scorecard.ipynb). It runs
-the full 307,511-applicant dataset end to end, and its last cell checks that every
-figure it shows equals `outputs/results.json`.
+the full 307,511-applicant dataset end to end in three stages (prepare the data,
+build the model, communicate the results), each broken into small numbered tasks
+with "check your work" assertions. It computes Weight of Evidence by hand, applies
+the three feature gates one at a time, converts the model to points, and asserts
+that this step-by-step build equals the tested pipeline. Its last cell checks that
+every figure it shows equals `outputs/results.json`.
 
 ## Question
 
