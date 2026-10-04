@@ -85,6 +85,7 @@ def correlation_gate(W: np.ndarray, cols: list, ivs: dict, threshold: float = CO
 
 
 def _sklearn_balanced(Xs: np.ndarray, y) -> LogisticRegression:
+    """scikit-learn's class-balanced logistic regression, fitted on standardised WoE columns."""
     return LogisticRegression(max_iter=3000, class_weight="balanced").fit(Xs, y)
 
 
@@ -112,6 +113,14 @@ def eliminate_wrong_signs(Xs: np.ndarray, y, cols: list, fit=_sklearn_balanced):
 
 
 def fit_full_model(full: pd.DataFrame = None, verbose: bool = True) -> dict:
+    """Fit the scorecard model on the 80/20 split and return everything later steps need.
+
+    Fits WoE on the training split, applies the IV, correlation and sign gates,
+    fits the from-scratch logistic regression (repeating the sign check on it) and
+    cross-checks it against scikit-learn. Returns a dict with the kept features, the
+    gate decisions, the WoE fits, the fitted model, the WoE matrices, holdout AUC and
+    KS, and the raw train and holdout splits.
+    """
     if full is None:
         full = build_full_feature_table()
     y = full["TARGET"]
@@ -138,6 +147,7 @@ def fit_full_model(full: pd.DataFrame = None, verbose: bool = True) -> dict:
         print(f"\nIV screen: {len(iv_kept)} of {len(woe_fits)} features have IV >= {IV_THRESHOLD}")
 
     def woe_encode(df, cols):
+        """Matrix with one column per feature in `cols`, each value replaced by its bin's WoE."""
         return np.column_stack([transform_woe(df[c], woe_fits[c]).to_numpy(dtype=float) for c in cols])
 
     W_iv = woe_encode(X_train, iv_kept)
@@ -259,6 +269,7 @@ def prohibited_basis_ablation(result: dict) -> dict:
     extra_va = np.column_stack([transform_woe(va_raw[c], fits[c]).to_numpy(dtype=float) for c in PROHIBITED_BASES])
 
     def auc_for(Wt, Wv):
+        """Holdout AUC of a balanced scikit-learn fit on the given train and holdout WoE matrices."""
         m, s = Wt.mean(axis=0), Wt.std(axis=0)
         s[s == 0] = 1.0
         model = _sklearn_balanced((Wt - m) / s, y_train)

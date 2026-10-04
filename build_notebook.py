@@ -6,11 +6,11 @@ notebook directly, then regenerate:
     jupyter nbconvert --to notebook --execute Credit_Risk_Scorecard.ipynb \
         --output Credit_Risk_Scorecard.ipynb --ExecutePreprocessor.timeout=3600
 
-The notebook builds the scorecard one small step at a time (load, explore,
-split, baseline, Weight of Evidence, the three feature gates, the fit, the
-points table, evaluation) so that a reader can follow and recreate it. Each
-step is a numbered task with a short code cell and, where it matters, a
-"check your work" assertion.
+The notebook follows the stages of scorecard development (data and sample,
+benchmarks, characteristic analysis, variable selection, fit, scaling,
+validation, strategy) one small step at a time, so that a reviewer can follow
+and recreate it. Each step is one short code cell with an explanation and,
+where it matters, a "Check" assertion.
 
 The step-by-step build is then compared with run_pipeline.build_validation_scores(),
 the tested function that writes outputs/results.json, and the notebook asserts
@@ -46,18 +46,28 @@ lenders, can a model separate borrowers who repay from those who default well
 enough for a lending decision, with a specific, readable reason behind every
 score?
 
-**How this notebook is organised.** It follows the same three stages as any
-model-building project, and each stage is broken into small numbered tasks:
+**How this notebook is organised.** A credit scorecard is reviewed by a credit
+committee and a model-validation team, and they expect it to be developed in a
+recognised order. The notebook follows that order, so each section answers the
+question a reviewer would ask at that point:
 
-1. **Prepare data:** import the tables, explore them, and split off a holdout.
-2. **Build model:** set a baseline, build the scorecard step by step, and
-   evaluate it on the holdout.
-3. **Communicate results:** turn the scores into a lending policy, explain an
-   individual decision, and make a recommendation.
+1. **Data and sample design:** what is the population, what is wrong with the
+   data, and which applicants are held back for testing?
+2. **Benchmarks:** what does the scorecard have to beat?
+3. **Characteristic analysis:** how does each characteristic relate to default
+   (Weight of Evidence and Information Value)?
+4. **Variable selection:** which characteristics enter, and why were the others
+   removed?
+5. **Model fit:** the logistic regression over the selected characteristics.
+6. **Scaling:** turning the model into points.
+7. **Validation:** discrimination, calibration, stability and fair-lending checks
+   on the holdout.
+8. **Strategy and adverse action:** cut-offs, the cost of each policy, and the
+   reasons given to a declined applicant.
 
-Each task has a short code cell. Cells marked **Check your work** contain
-assertions: if a step went wrong, the notebook stops there instead of carrying
-a wrong number forward. The helper functions imported from `src/` are covered
+Every step is one short code cell with an explanation of what it does and what
+its output shows. Cells containing **Check** assertions stop the notebook at the
+step that went wrong instead of carrying a wrong number forward. The helper functions imported from `src/` are covered
 by the test suite (`tests/`), and the notebook's last cell checks that every
 figure shown here equals the one the pipeline writes to `outputs/results.json`.
 """)
@@ -82,16 +92,14 @@ pd.set_option("display.width", 120)
 
 md("""
 ---
-## 1. Prepare data
-
-### 1.1 Import
+## 1. Data and sample design
 
 The main table is `application_train.csv`: one row per loan application, with
 the outcome in `TARGET` (1 = the applicant defaulted, 0 = repaid).
 """)
 
 md("""
-**Task 1.1.1:** Load the application table and look at its size and a few
+**Step 1.1:** Load the application table and look at its size and a few
 columns.
 """)
 
@@ -106,13 +114,13 @@ app[["SK_ID_CURR", "TARGET", "AMT_INCOME_TOTAL", "AMT_CREDIT", "DAYS_BIRTH", "DA
 """)
 
 code("""
-# Check your work: one row per applicant, and every applicant is in the file
+# Check: one row per applicant, and every applicant is in the file
 assert len(app) == 307_511
 assert app["SK_ID_CURR"].is_unique
 """)
 
 md("""
-**Task 1.1.2:** How common is default? This decides which metrics make sense
+**Step 1.2:** How common is default? This decides which metrics make sense
 later.
 """)
 
@@ -125,11 +133,11 @@ md("""
 About 8% of applicants defaulted. With a target this imbalanced, accuracy is a
 poor guide: a model that approved everyone would be 92% "accurate" and useless.
 The model is judged on **ranking** instead: does it put defaulters below
-repayers? AUC and KS, defined in section 2.4, measure exactly that.
+repayers? AUC and KS, defined in section 7, measure exactly that.
 """)
 
 md("""
-**Task 1.1.3:** Look for values that are not what they claim to be.
+**Step 1.3:** Look for values that are not what they claim to be.
 `DAYS_EMPLOYED` counts days before the application, so it should be negative.
 """)
 
@@ -148,7 +156,7 @@ the next task sets it to missing.
 """)
 
 md("""
-**Task 1.1.4:** Build the application features with `engineer_baseline` from
+**Step 1.4:** Build the application features with `engineer_baseline` from
 `src/baseline_features.py`. It converts day counts to years, replaces the
 placeholder with a missing value, adds ratio features (credit to income,
 annuity to income and so on), and summarises the three external scores.
@@ -167,10 +175,10 @@ feats[["AGE_YEARS", "EMPLOYED_YEARS", "CREDIT_INCOME_RATIO", "EXT_SOURCE_MEAN"]]
 code("""
 from feature_lists import PROHIBITED_BASES
 
-# Check your work: the placeholder is now missing for exactly the 55,374 flagged applicants
+# Check: the placeholder is now missing for exactly the 55,374 flagged applicants
 assert (feats["EMPLOYED_YEARS"].isna() == positive).all()
 assert feats["EMPLOYED_YEARS"].isna().sum() == positive.sum() == 55_374
-# Check your work: sex and marital status never enter the feature table
+# Check: sex and marital status never enter the feature table
 assert not set(PROHIBITED_BASES) & set(feats.columns)
 """)
 
@@ -182,7 +190,7 @@ Regulation B. They are excluded from every feature list (`PROHIBITED_BASES` in
 """)
 
 md("""
-**Task 1.1.5:** Add each applicant's history from the other seven tables:
+**Step 1.5:** Add each applicant's history from the other seven tables:
 credit-bureau records, previous Home Credit applications and repayment
 behaviour. `load_relational_features` aggregates them to one row per applicant
 (counts, averages, the share of bureau credit overdue, how often past
@@ -202,12 +210,12 @@ print(f"history table: {rel.shape[1] - 1} features   combined table: {full.shape
 """)
 
 code("""
-# Check your work: the join added columns, not rows
+# Check: the join added columns, not rows
 assert len(full) == len(feats) and full["SK_ID_CURR"].is_unique
 """)
 
 md("""
-### 1.2 Explore
+### First look at the signal
 
 Before any modelling: does the data hold signal at all? The three `EXT_SOURCE`
 columns are external bureau-style scores supplied with the data. Group the
@@ -217,7 +225,7 @@ fitted or used by the model.)
 """)
 
 md("""
-**Task 1.2.1:** Default rate by decile of `EXT_SOURCE_MEAN`.
+**Step 1.6:** Default rate by decile of `EXT_SOURCE_MEAN`.
 """)
 
 code("""
@@ -236,9 +244,9 @@ risk falls.
 """)
 
 md("""
-**Task 1.2.2:** Missing values matter too. How does the default rate differ for
-applicants with and without an employment length (the pensioner group from Task
-1.1.3)?
+**Step 1.7:** Missing values matter too. How does the default rate differ for
+applicants with and without an employment length (the pensioner group from Step
+1.3)?
 """)
 
 code("""
@@ -254,7 +262,7 @@ used below, gives missing values a bin of their own for exactly this reason.
 """)
 
 md("""
-### 1.3 Split
+### Development and holdout samples
 
 The model is fitted on one part of the data and judged on another part it has
 never seen. 20% of applicants are held out, stratified so the default rate is
@@ -262,7 +270,7 @@ the same in both parts.
 """)
 
 md("""
-**Task 1.3.1:** Separate the target from the features and split 80/20.
+**Step 1.8:** Separate the target from the features and split 80/20.
 """)
 
 code("""
@@ -278,7 +286,7 @@ print(f"holdout:  {len(X_val):,} applicants, default rate {y_val.mean():.2%}")
 """)
 
 code("""
-# Check your work: an 80/20 split with the same default rate on both sides
+# Check: an 80/20 split with the same default rate on both sides
 assert len(X_val) == 61_503
 assert abs(y_train.mean() - y_val.mean()) < 1e-3
 """)
@@ -288,16 +296,14 @@ assert abs(y_train.mean() - y_val.mean()) < 1e-3
 
 md("""
 ---
-## 2. Build model
+## 2. Benchmarks
 
-### 2.1 Baseline
-
-A model is only useful if it beats something simpler. Two baselines set the
-floor.
+A scorecard is only worth its complexity if it beats something simpler. Two
+benchmarks set the floor.
 """)
 
 md("""
-**Task 2.1.1:** The "dumb" baseline gives every applicant the same score.
+**Step 2.1:** The "dumb" baseline gives every applicant the same score.
 """)
 
 code("""
@@ -314,7 +320,7 @@ md("""
 """)
 
 md("""
-**Task 2.1.2:** A sensible baseline uses the application form alone: a
+**Step 2.2:** A sensible baseline uses the application form alone: a
 standard scikit-learn logistic regression with missing values filled by the
 median, features scaled, and categories one-hot encoded (`build_pipeline` in
 `src/baseline_model.py`). The full scorecard has to beat this.
@@ -338,7 +344,7 @@ features even though `X_train` also holds the history columns.
 """)
 
 md("""
-### 2.2 Iterate: build the scorecard step by step
+## 3. Characteristic analysis: Weight of Evidence
 
 A scorecard does not feed raw values to the model. It first cuts each feature
 into bins and replaces each bin with its **Weight of Evidence (WoE)**.
@@ -359,7 +365,7 @@ applied to the holdout.
 """)
 
 md("""
-**Task 2.2.1:** Compute WoE and IV by hand for one feature, `EXT_SOURCE_MEAN`,
+**Step 3.1:** Compute WoE and IV by hand for one feature, `EXT_SOURCE_MEAN`,
 in five steps.
 """)
 
@@ -399,7 +405,7 @@ from woe_iv import fit_woe
 
 reference = fit_woe(X_train[col], y_train, is_categorical=False, n_bins=10)
 
-# Check your work: the hand calculation and the tested function agree on every bin
+# Check: the hand calculation and the tested function agree on every bin
 assert np.allclose(woe_table.loc[reference["table"].index, "woe"], reference["table"]["woe"])
 assert abs(iv_by_hand - reference["iv"]) < 1e-12
 reference["table"][["n", "bad", "woe"]].round(4)
@@ -407,12 +413,12 @@ reference["table"][["n", "bad", "woe"]].round(4)
 
 md("""
 Read down the `woe` column: it rises from strongly negative in the lowest band
-to strongly positive in the highest, the same pattern as Task 1.2.1, now on a
+to strongly positive in the highest, the same pattern as Step 1.6, now on a
 scale the model can use.
 """)
 
 md("""
-**Task 2.2.2:** Fit WoE for every candidate feature: 54 numeric (cut into ten
+**Step 3.2:** Fit WoE for every candidate feature: 54 numeric (cut into ten
 bins) and 8 categorical (one bin per category).
 """)
 
@@ -429,15 +435,17 @@ print(f"candidate features: {len(woe_fits)}")
 """)
 
 code("""
-# Check your work: 62 candidates, and the prohibited bases are not among them
+# Check: 62 candidates, and the prohibited bases are not among them
 assert len(woe_fits) == 62 and not set(PROHIBITED_BASES) & set(woe_fits)
 """)
 
 md("""
-The candidates now pass through three gates, each removing features for a
-stated reason.
+## 4. Variable selection
 
-**Task 2.2.3: Gate 1, information value.** Rank the features by IV and drop
+The candidates now pass through three gates, each removing features for a
+stated reason that can be shown to a reviewer.
+
+**Step 4.1: Gate 1, information value.** Rank the features by IV and drop
 those below 0.01, which carry almost no signal.
 """)
 
@@ -463,8 +471,8 @@ decision.
 """)
 
 md("""
-**Task 2.2.4:** One encoding problem to rule out. `engineer_baseline` also made
-an anomaly flag, `DAYS_EMPLOYED_ANOM`, for the placeholder found in Task 1.1.3.
+**Step 4.2:** One encoding problem to rule out. `engineer_baseline` also made
+an anomaly flag, `DAYS_EMPLOYED_ANOM`, for the placeholder found in Step 1.3.
 Compare it with the `Missing` bin of `EMPLOYED_YEARS`.
 """)
 
@@ -490,7 +498,7 @@ in the 62 candidates).
 """)
 
 md("""
-**Task 2.2.5:** Replace every value with its bin's WoE, for the features that
+**Step 4.3:** Replace every value with its bin's WoE, for the features that
 passed Gate 1. This is the matrix the model is fitted on.
 """)
 
@@ -508,7 +516,7 @@ print(f"WoE matrix: {W_iv.shape[0]:,} applicants x {W_iv.shape[1]} features")
 """)
 
 md("""
-**Task 2.2.6: Gate 2, correlation.** Two features that move together almost
+**Step 4.4: Gate 2, correlation.** Two features that move together almost
 perfectly say the same thing twice, and the model cannot tell which one deserves
 the weight. Walk down the features in IV order and keep a feature only if its
 correlation with every feature already kept is at most 0.9.
@@ -541,7 +549,7 @@ collapse both into the same two-bin split.
 """)
 
 md("""
-**Task 2.2.7: Gate 3, coefficient sign.** WoE is ln(good/bad), so a higher WoE
+**Step 4.5: Gate 3, coefficient sign.** WoE is ln(good/bad), so a higher WoE
 always means safer. In a model of the probability of default, every coefficient
 should therefore be **negative**. A positive one means the feature's effect has
 reversed once the other features are in the model, and the scorecard would hand
@@ -581,11 +589,13 @@ rather than forcing its sign, keeps every remaining coefficient a genuine fitted
 value.
 
 `class_weight="balanced"` makes the 8% of defaulters count as much as the 92% of
-repayers during fitting; Task 2.3.2 undoes its effect on the intercept.
+repayers during fitting; Step 6.2 undoes its effect on the intercept.
 """)
 
 md("""
-**Task 2.2.8:** Fit the final model with the project's own logistic regression,
+## 5. Model fit
+
+**Step 5.1:** Fit the final model with the project's own logistic regression,
 written from first principles in `src/from_scratch_lr.py` (batch gradient
 descent with a small L2 penalty). It penalises the weights slightly differently
 from scikit-learn, so the sign check is repeated on this fit.
@@ -619,14 +629,14 @@ print(f"holdout AUC: {full_auc:.4f}  (application-only baseline: {baseline_auc:.
 """)
 
 code("""
-# Check your work: the scorecard beats the application-only baseline, every sign is right,
+# Check: the scorecard beats the application-only baseline, every sign is right,
 # and the solver stopped because it converged, not because it ran out of iterations
 assert full_auc > baseline_auc
 assert (scratch.coef_ < 0).all() and scratch.converged_
 """)
 
 md("""
-**Task 2.2.9:** Every step above is also packaged in one tested function,
+**Step 5.2:** Every step above is also packaged in one tested function,
 `build_validation_scores` in `src/run_pipeline.py`, which is what writes
 `outputs/results.json`. Run it and confirm it builds the same model.
 """)
@@ -639,7 +649,7 @@ result, sc, Xf_val, yf_val, scores = build_validation_scores(full, verbose=False
 """)
 
 code("""
-# Check your work: the step-by-step build and the pipeline agree exactly
+# Check: the step-by-step build and the pipeline agree exactly
 assert result["kept_cols"] == kept_cols
 assert [d[:2] for d in result["correlation_gate_dropped"]] == [d[:2] for d in corr_dropped]
 assert [r[0] for r in result["sign_gate_removed"]] == [r[0] for r in sign_removed]
@@ -650,12 +660,12 @@ print("step-by-step build matches the pipeline: same features, coefficients and 
 """)
 
 md("""
-### 2.3 Turn the model into points
+## 6. Scaling: from model to points
 
 The model outputs log-odds of default. A scorecard re-expresses them as points
 that a loan officer can add up without the model.
 
-**Task 2.3.1:** The model was fitted on standardised WoE. Convert its
+**Step 6.1:** The model was fitted on standardised WoE. Convert its
 coefficients back to raw WoE units, so that points can be read straight off the
 WoE tables.
 """)
@@ -665,13 +675,13 @@ code("""
 coef_raw = scratch.coef_ / std
 intercept_balanced = scratch.intercept_ - np.sum(scratch.coef_ * mean / std)
 
-# Check your work: matches the pipeline's conversion
+# Check: matches the pipeline's conversion
 assert np.allclose(coef_raw, sc["coef_raw"]) and abs(intercept_balanced - sc["intercept_balanced"]) < 1e-12
 print(f"intercept on raw WoE: {intercept_balanced:+.4f}")
 """)
 
 md("""
-**Task 2.3.2:** Correct the intercept. Balanced class weights fit the model as if
+**Step 6.2:** Correct the intercept. Balanced class weights fit the model as if
 half of all applicants defaulted. Adding logit(training default rate) -
 logit(0.5) moves the intercept back to the real 8% without changing any
 coefficient, so the ranking (AUC, KS) is unchanged but probabilities mean what
@@ -686,13 +696,13 @@ def logit(p):
 train_bad_rate = y_train.mean()
 intercept = intercept_balanced + logit(train_bad_rate) - logit(0.5)
 
-# Check your work: matches the pipeline's prior-corrected intercept
+# Check: matches the pipeline's prior-corrected intercept
 assert abs(intercept - sc["intercept"]) < 1e-12
 print(f"training default rate {train_bad_rate:.4f}: intercept {intercept_balanced:+.4f} -> {intercept:+.4f}")
 """)
 
 md("""
-**Task 2.3.3:** Set the scale. Two business conventions fix it: 600 points means
+**Step 6.3:** Set the scale. Two business conventions fix it: 600 points means
 odds of 20 repayers to 1 defaulter, and every 40 points doubles the odds (PDO,
 "points to double the odds"). Then
 
@@ -707,13 +717,13 @@ factor = 40 / np.log(2)                     # points per unit of log-odds
 offset = 600 - factor * np.log(20)          # puts 20:1 odds at 600 points
 base_points = offset - factor * intercept   # points every applicant starts with
 
-# Check your work: the pipeline uses the same scale
+# Check: the pipeline uses the same scale
 assert np.isclose(factor, sc["factor"]) and np.isclose(offset, sc["offset"]) and np.isclose(base_points, sc["base_points"])
 print(f"factor {factor:.2f}   offset {offset:.1f}   base points {base_points:.1f}")
 """)
 
 md("""
-**Task 2.3.4:** Read the points table for the highest-IV feature. Each bin
+**Step 6.4:** Read the points table for the highest-IV feature. Each bin
 carries a fixed number of points, and a committee can review every table like
 this one before the model goes live.
 """)
@@ -724,14 +734,14 @@ table = woe_fits[top]["table"][["n", "bad", "woe"]].copy()
 table["default_rate"] = table["bad"] / table["n"]
 table["points"] = -factor * coef_raw[0] * table["woe"]   # points for each bin of this feature
 
-# Check your work: the same points as the pipeline's table
+# Check: the same points as the pipeline's table
 assert np.allclose(table["points"], sc["points_tables"][top])
 print(f"WoE and points for {top}, in bin order:")
 table.round(4)
 """)
 
 md("""
-**Task 2.3.5:** Score one holdout applicant by hand: base points plus the points
+**Step 6.5:** Score one holdout applicant by hand: base points plus the points
 of each of their bins.
 """)
 
@@ -745,7 +755,7 @@ for c in kept_cols:
     label = _bin_labels(pd.Series([applicant[c]]), fit["is_categorical"], fit["edges"]).iloc[0]
     total += sc["points_tables"][c].get(label, 0.0)   # an unseen category scores 0 points
 
-# Check your work: the hand total equals the pipeline's score for this applicant
+# Check: the hand total equals the pipeline's score for this applicant
 assert np.isclose(min(max(total, 300), 850), scores.iloc[0])
 print(f"applicant {applicant.name}: {total:.1f} points")
 """)
@@ -767,9 +777,9 @@ print(f"numeric features whose WoE moves in one direction across the bins: "
 """)
 
 md("""
-### 2.4 Evaluate
+## 7. Validation
 
-**Task 2.4.1:** Before trusting the evaluation metrics, test them. AUC and KS
+**Step 7.1:** Before trusting the evaluation metrics, test them. AUC and KS
 are implemented from first principles in `src/metrics_scratch.py`; check them
 against scikit-learn and scipy on synthetic data with tied scores.
 
@@ -794,7 +804,7 @@ scipy_ks = ks_2samp(score_check[y_check == 1], score_check[y_check == 0]).statis
 print(f"AUC: from scratch {scratch_auc:.6f}, scikit-learn {sklearn_auc:.6f}")
 print(f"KS:  from scratch {scratch_ks:.6f}, scipy {scipy_ks:.6f}")
 
-# Check your work: both agree to floating-point precision
+# Check: both agree to floating-point precision
 assert abs(scratch_auc - sklearn_auc) < 1e-9 and abs(scratch_ks - scipy_ks) < 1e-9
 """)
 
@@ -806,7 +816,7 @@ forces ties so that an ungrouped version would fail.
 """)
 
 md("""
-**Task 2.4.2:** Compare the from-scratch model with scikit-learn's fit of the
+**Step 7.2:** Compare the from-scratch model with scikit-learn's fit of the
 same class-balanced objective.
 """)
 
@@ -822,7 +832,7 @@ individual coefficients less determined than the combined score.
 """)
 
 md("""
-**Task 2.4.3:** Measure the scorecard on the holdout. `summarise` computes every
+**Step 7.3:** Measure the scorecard on the holdout. `summarise` computes every
 holdout figure the README quotes.
 """)
 
@@ -844,7 +854,7 @@ higher score than defaulters.
 """)
 
 md("""
-**Task 2.4.4:** Check calibration: does a predicted 5% default rate really mean
+**Step 7.4:** Check calibration: does a predicted 5% default rate really mean
 5%? Group the holdout into ten bands of predicted probability of default (PD).
 """)
 
@@ -860,11 +870,11 @@ pd.DataFrame(summary["calibration_by_decile"]).round(4)
 md("""
 Predicted and observed default rates are close in every band, and the observed
 odds around 600 points are close to the 20:1 the scale promises. That is the
-prior correction of Task 2.3.2 at work.
+prior correction of Step 6.2 at work.
 """)
 
 md("""
-**Task 2.4.5:** Check stability. The Population Stability Index (PSI) compares
+**Step 7.5:** Check stability. The Population Stability Index (PSI) compares
 the score distribution on the training split with the holdout.
 """)
 
@@ -879,7 +889,7 @@ warning level).
 """)
 
 md("""
-**Task 2.4.6:** Plot the score distributions of repayers and defaulters, and the
+**Step 7.6:** Plot the score distributions of repayers and defaulters, and the
 default rate by score band.
 """)
 
@@ -894,7 +904,7 @@ _ = default_rate_by_band(scores, yf_val)
 """)
 
 md("""
-**Task 2.4.7:** Run the fair-lending acceptance checks.
+**Step 7.7:** Run the fair-lending acceptance checks.
 """)
 
 code("""
@@ -904,14 +914,14 @@ print(f"AGE_YEARS in the scorecard: {age['age_feature_in_scorecard']}; check pas
 print(f"points for the EMPLOYED_YEARS Missing bin (pensioners and the unemployed): "
       f"{summary['employed_years_missing_bin_points']:+.1f}")
 
-# Check your work: the acceptance checks pass
+# Check: the acceptance checks pass
 assert summary["all_coefficients_negative"] and age["passed"]
 assert summary["employed_years_missing_bin_points"] > 0
 """)
 
 md("""
 The pensioner group receives positive points, consistent with its lower default
-rate (Task 1.2.2), and no applicant aged 62 or over can receive negative points
+rate (Step 1.7), and no applicant aged 62 or over can receive negative points
 for age.
 """)
 
@@ -920,9 +930,9 @@ for age.
 
 md("""
 ---
-## 3. Communicate results
+## 8. Strategy and adverse action
 
-**Task 3.1:** Turn the scores into a lending decision. Approve only the
+**Step 8.1:** Turn the scores into a lending decision. Approve only the
 highest-scoring share of the holdout and measure what each policy would have
 cost. Credit loss = credit amount of each approved loan that defaulted x a 45%
 loss given default (an assumption: the Basel foundation-IRB value for senior
@@ -940,7 +950,7 @@ policy[["approval_rate", "cut_off_score", "default_rate_approved", "loss_avoided
 """)
 
 code("""
-# Check your work: the same table as outputs/business_impact.json
+# Check: the same table as outputs/business_impact.json
 published = pd.DataFrame(json.load(open("outputs/business_impact.json", encoding="utf-8"))["policies"])
 assert np.allclose(policy["loss_avoided_pct"], published["loss_avoided_pct"])
 assert (policy["good_borrowers_declined"] == published["good_borrowers_declined"]).all()
@@ -954,7 +964,7 @@ puts both sides of that trade on one line. At 80% approval, the scorecard avoids
 """)
 
 md("""
-**Task 3.2:** Explain an individual decision. Take a holdout applicant who
+**Step 8.2:** Explain an individual decision. Take a holdout applicant who
 defaulted and scored below the 80% approval cut-off, and list the reasons: the
 characteristics on which they lost the most points against the best bin.
 """)
@@ -1000,7 +1010,7 @@ columns with zero-aware bins.
 """)
 
 md("""
-**Task 3.3:** Final check: every figure in this notebook must equal the one the
+**Step 8.3:** Final check: every figure in this notebook must equal the one the
 pipeline wrote to `outputs/results.json`.
 """)
 

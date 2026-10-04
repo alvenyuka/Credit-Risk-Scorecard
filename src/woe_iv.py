@@ -35,6 +35,7 @@ MISSING_LABEL = "Missing"
 def fit_continuous_bins(x: pd.Series, n_bins: int = 10) -> np.ndarray:
     # Always float64: a low-cardinality integer column (for example a 0/1 flag)
     # can make np.quantile return an int array, which cannot hold -inf.
+    """Bin edges at the deciles of the non-missing values, with open first and last bins."""
     finite = x.dropna().astype(float)
     edges = np.unique(np.quantile(finite, np.linspace(0, 1, n_bins + 1))).astype(float)
     if len(edges) < 3:
@@ -45,12 +46,14 @@ def fit_continuous_bins(x: pd.Series, n_bins: int = 10) -> np.ndarray:
 
 
 def apply_continuous_bins(x: pd.Series, edges: np.ndarray) -> pd.Series:
+    """Interval label of each value under `edges`; missing values get the Missing label."""
     labels = pd.cut(x, bins=edges, include_lowest=True).astype(str)
     labels = labels.where(~x.isna(), MISSING_LABEL)
     return labels
 
 
 def _bin_labels(x: pd.Series, is_categorical: bool, edges) -> pd.Series:
+    """Bin label of each value: the category itself, or its interval for a numeric feature."""
     if is_categorical:
         labels = x.astype(str)
         labels = labels.where(~x.isna(), MISSING_LABEL)
@@ -60,6 +63,12 @@ def _bin_labels(x: pd.Series, is_categorical: bool, edges) -> pd.Series:
 
 def fit_woe(x: pd.Series, y: pd.Series, is_categorical: bool = False,
             n_bins: int = 10, epsilon: float = 0.5) -> dict:
+    """Fit bins and WoE for one feature on training data.
+
+    Returns a dict with the bin edges (None for a categorical feature), the table of
+    counts, defaults, WoE and IV contribution per bin, and the feature's total IV.
+    epsilon is added to the good and bad counts so an empty bin never gives log(0).
+    """
     edges = None if is_categorical else fit_continuous_bins(x, n_bins)
     bins = _bin_labels(x, is_categorical, edges)
 
@@ -126,12 +135,14 @@ def monotonicity_report(woe_fits: dict, cols: list) -> pd.DataFrame:
 
 
 def transform_woe(x: pd.Series, fit_result: dict) -> pd.Series:
+    """Replace each value with the WoE of its bin; a category unseen in training gets 0 (neutral)."""
     bins = _bin_labels(x, fit_result["is_categorical"], fit_result["edges"])
     mapped = bins.map(fit_result["table"]["woe"])
     return mapped.fillna(0.0)  # unseen bin/category on a new split -> neutral
 
 
 def iv_strength(iv: float) -> str:
+    """Conventional reading of an information value: useless, weak, medium, strong or suspicious."""
     if iv < 0.02:
         return "useless"
     if iv < 0.1:

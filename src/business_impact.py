@@ -71,6 +71,7 @@ def policies_to_records(table: pd.DataFrame) -> list:
 
 
 def plot(table, path):
+    """Bar chart of credit loss under each approval policy, saved to `path`."""
     import matplotlib
 
     matplotlib.use("Agg")
@@ -96,6 +97,7 @@ def plot(table, path):
 
 
 def plot_iv(feature_iv: dict, path, top=15):
+    """Horizontal bar chart of the `top` selected features by information value, saved to `path`."""
     import matplotlib
 
     matplotlib.use("Agg")
@@ -117,6 +119,7 @@ def plot_iv(feature_iv: dict, path, top=15):
 
 
 def main():
+    """Build the lending-policy table from the saved holdout scores and write the JSON and both charts."""
     from run_pipeline import POINTS_PATH, load_validation_scores
 
     df = load_validation_scores()

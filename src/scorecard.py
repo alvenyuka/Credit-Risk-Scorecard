@@ -45,6 +45,7 @@ def prior_correct_intercept(intercept: float, train_bad_rate: float,
     ranking (AUC, KS) is unchanged.
     """
     def logit(p):
+        """Log-odds of probability p."""
         return np.log(p / (1 - p))
     return float(intercept + logit(train_bad_rate) - logit(fitted_bad_rate))
 
@@ -59,6 +60,13 @@ def assert_woe_coefficient_signs(coef_raw, kept_cols) -> None:
 def build_scorecard(coef: np.ndarray, intercept: float, kept_cols: list,
                     woe_fits: dict, base_score: int = 600, base_odds: float = 20,
                     pdo: float = 40) -> dict:
+    """Points table for a fitted model on raw WoE inputs.
+
+    factor = pdo / ln(2) and offset = base_score - factor x ln(base_odds); every
+    applicant starts at offset - factor x intercept, and each bin of each kept
+    feature carries -factor x coefficient x WoE points. Returns the scale constants,
+    the base points and one points Series per feature.
+    """
     factor = pdo / np.log(2)
     offset = base_score - factor * np.log(base_odds)
 

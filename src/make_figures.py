@@ -22,6 +22,7 @@ REPAID, DEFAULTED, INK = "#2b6cb0", "#c0392b", "#2d3748"
 
 
 def _finish(fig, path):
+    """Tidy the layout and, when `path` is given, save the figure and close it."""
     import matplotlib.pyplot as plt
 
     fig.tight_layout()
@@ -32,6 +33,7 @@ def _finish(fig, path):
 
 
 def score_distribution(scores, y, path=None):
+    """Overlaid histograms of the scores of repayers and defaulters (saved when `path` is given)."""
     import matplotlib.pyplot as plt
 
     scores, y = pd.Series(np.asarray(scores, dtype=float)), np.asarray(y)
@@ -52,6 +54,7 @@ def score_distribution(scores, y, path=None):
 
 
 def default_rate_by_band(scores, y, path=None):
+    """Default rate in each score decile against the average (saved when `path` is given)."""
     import matplotlib.pyplot as plt
 
     y = np.asarray(y, dtype=float)
@@ -76,6 +79,7 @@ def default_rate_by_band(scores, y, path=None):
 
 
 def main():
+    """Draw both README charts from the saved holdout scores."""
     import matplotlib
 
     matplotlib.use("Agg")

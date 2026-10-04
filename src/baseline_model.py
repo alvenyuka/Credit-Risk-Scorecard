@@ -28,6 +28,7 @@ NUMERIC_COLS = BASELINE_NUMERIC
 
 
 def build_pipeline() -> Pipeline:
+    """Unfitted application-only benchmark: impute, scale, one-hot encode, then a balanced logistic regression."""
     numeric_pipe = Pipeline([
         ("impute", SimpleImputer(strategy="median")),
         ("scale", StandardScaler()),
@@ -45,6 +46,7 @@ def build_pipeline() -> Pipeline:
 
 
 def main():
+    """Fit the benchmark on the 80/20 split and print its training and holdout AUC."""
     train_raw = load_application("train")
     feats = engineer_baseline(train_raw)
 

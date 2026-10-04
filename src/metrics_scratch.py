@@ -42,6 +42,7 @@ def _average_rank(x: np.ndarray) -> np.ndarray:
 
 
 def auc_rank_sum(y_true, y_score) -> float:
+    """AUC from the rank-sum (Mann-Whitney) formula, with tied scores given their average rank."""
     y_true = np.asarray(y_true)
     y_score = np.asarray(y_score, dtype=float)
     ranks = _average_rank(y_score)
@@ -56,6 +57,7 @@ def auc_rank_sum(y_true, y_score) -> float:
 
 
 def gini(y_true, y_score) -> float:
+    """Gini coefficient, 2 x AUC - 1."""
     return 2 * auc_rank_sum(y_true, y_score) - 1
 
 
@@ -84,6 +86,11 @@ def ks_statistic(y_true, y_score) -> float:
 
 
 def psi(expected: np.ndarray, actual: np.ndarray, n_bins: int = 10) -> float:
+    """Population Stability Index of `actual` against `expected`.
+
+    Bins are the deciles of `expected`; an empty bin is floored at 0.01% so the log
+    stays finite. Below 0.1 is usually read as stable and above 0.25 as a shift.
+    """
     expected = np.asarray(expected, dtype=float)
     actual = np.asarray(actual, dtype=float)
 

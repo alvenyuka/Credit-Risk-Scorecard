@@ -237,6 +237,7 @@ def load_validation_scores() -> pd.DataFrame:
 
 
 def main():
+    """Fit once, print the release summary, and write results.json, the points table and the holdout scores."""
     result, sc, X_val, y_val, scores = build_validation_scores()
     summary = summarise(result, sc, X_val, y_val, scores)
 

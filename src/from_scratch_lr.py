@@ -18,12 +18,20 @@ import numpy as np
 
 
 def _sigmoid(z: np.ndarray) -> np.ndarray:
+    """Logistic function, with inputs clipped to +/-35 so exp() cannot overflow."""
     return 1.0 / (1.0 + np.exp(-np.clip(z, -35, 35)))
 
 
 class FromScratchLogisticRegression:
+    """Binary logistic regression fitted by batch gradient descent.
+
+    lr is the step size, n_iter the iteration limit, l2 the penalty on the weights
+    (not the intercept) and tol the change in cost that counts as converged.
+    """
+
     def __init__(self, lr: float = 0.5, n_iter: int = 3000, l2: float = 1e-4,
                  tol: float = 1e-10, verbose: bool = False):
+        """Store the settings; coefficients are set by fit()."""
         self.lr = lr
         self.n_iter = n_iter
         self.l2 = l2
@@ -37,6 +45,7 @@ class FromScratchLogisticRegression:
         self.final_cost_change_ = None
 
     def _cost(self, X, y, w, b, sw):
+        """Weighted cross-entropy plus the L2 penalty, for weights w, intercept b and sample weights sw."""
         z = X @ w + b
         p = _sigmoid(z)
         eps = 1e-12
@@ -110,6 +119,7 @@ class FromScratchLogisticRegression:
         return self
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
+        """Predicted probability of class 1 (default) for each row of X, as a 1-D array."""
         X = np.asarray(X, dtype=float)
         return _sigmoid(X @ self.coef_ + self.intercept_)
 

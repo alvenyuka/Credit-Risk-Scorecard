@@ -22,6 +22,7 @@ from woe_iv import fit_woe, iv_strength, transform_woe
 
 
 def main():
+    """Fit the application-only WoE logistic regression and print its holdout AUC."""
     train_raw = load_application("train")
     feats = engineer_baseline(train_raw)
 
@@ -52,6 +53,7 @@ def main():
     print(f"\nkeeping {len(kept_cols)} / {len(woe_fits)} features (IV >= 0.02)")
 
     def woe_encode(df, cols):
+        """Matrix with one column per feature, each value replaced by its bin's WoE."""
         return np.column_stack([transform_woe(df[c], woe_fits[c]).values for c in cols])
 
     Xw_train = woe_encode(X_train, kept_cols)

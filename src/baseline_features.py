@@ -31,6 +31,13 @@ DAYS_EMPLOYED_ANOMALY = 365243
 
 
 def engineer_baseline(df: pd.DataFrame) -> pd.DataFrame:
+    """Application features for every applicant, one row each.
+
+    Converts day counts to years, replaces the DAYS_EMPLOYED placeholder 365243 with
+    NaN (flagged in DAYS_EMPLOYED_ANOM), adds income and credit ratios and summarises
+    the three external scores. Keeps SK_ID_CURR, TARGET when present, and the columns
+    listed in feature_lists.py; sex and marital status are never kept.
+    """
     out = df.copy()
 
     out["AGE_YEARS"] = -out["DAYS_BIRTH"] / 365.25

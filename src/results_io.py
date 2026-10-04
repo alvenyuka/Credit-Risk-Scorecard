@@ -35,6 +35,7 @@ def _git_commit() -> str | None:
 
 
 def _package_versions() -> dict:
+    """Installed versions of the libraries the results depend on."""
     versions = {}
     for name in ("numpy", "pandas", "scikit-learn", "scipy", "matplotlib", "pyarrow"):
         module = {"scikit-learn": "sklearn"}.get(name, name)
