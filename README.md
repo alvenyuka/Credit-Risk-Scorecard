@@ -176,7 +176,8 @@ outputs/business_impact.json approval-policy table with its assumptions
 outputs/scorecard_points.json the points for every bin of every kept feature
 figures/                     charts drawn from the same model
 figs/, output/               charts and demo data from an earlier pipeline, kept for its demo page
-Credit_Risk_Scorecard.ipynb  walkthrough notebook, executed end to end
+Credit_Risk_Scorecard.ipynb  walkthrough notebook in scorecard-development order, executed end to end
+build_notebook.py            generates the notebook (edit this, not the .ipynb)
 docs/METHODOLOGY.md          full method, results and test descriptions
 ```
 
@@ -193,10 +194,12 @@ python src/business_impact.py      # approval-policy table, lending-policy and I
 
 ## Documentation
 
-The walkthrough notebook is [`Credit_Risk_Scorecard.ipynb`](Credit_Risk_Scorecard.ipynb). It builds the scorecard in small
-numbered steps (Weight of Evidence by hand, the three feature gates, the fit, the points table), with a check after
-each step and a final check that the step-by-step build matches the tested pipeline. The full method, every
-result and the test suite are described in [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md).
+The walkthrough notebook is [`Credit_Risk_Scorecard.ipynb`](Credit_Risk_Scorecard.ipynb). It follows the order a
+scorecard is developed and reviewed: data and sample design, benchmarks, characteristic analysis (Weight of Evidence
+computed by hand for one feature), variable selection (the three gates applied one at a time), model fit, scaling to
+points, validation, and lending strategy with reason codes. Checks after the key steps stop it if a step goes wrong,
+and it asserts that its step-by-step build equals the tested pipeline. The full method, every result and the test
+suite are described in [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md).
 
 ## License
 
