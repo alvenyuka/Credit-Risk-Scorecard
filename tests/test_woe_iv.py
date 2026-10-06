@@ -27,6 +27,7 @@ import pandas as pd
 import pytest
 
 from woe_iv import (
+    MISSING_LABEL,
     apply_continuous_bins,
     fit_continuous_bins,
     fit_woe,
@@ -203,3 +204,49 @@ def test_monotonicity_report_flags_a_monotone_and_a_u_shaped_feature():
     report = monotonicity_report(fits, ["mono", "u", "cat"]).set_index("feature")
     assert report.loc["cat", "monotonic_woe"] is None
     assert report.loc["mono", "type"] == "numeric"
+
+
+# ---------------------------------------------------------------------------
+# Coarse classing (binning="monotone")
+# ---------------------------------------------------------------------------
+
+def _noisy_monotone(n=40_000, seed=3):
+    rng = np.random.default_rng(seed)
+    x = pd.Series(rng.normal(0, 1, n))
+    p = 1 / (1 + np.exp(-(-2.5 + 0.4 * x + rng.normal(0, 1.5, n))))
+    return x, pd.Series((rng.random(n) < p).astype(int))
+
+
+def test_monotone_binning_gives_monotonic_woe_where_deciles_do_not():
+    x, y = _noisy_monotone()
+    decile = fit_woe(x, y, n_bins=20)
+    coarse = fit_woe(x, y, n_bins=20, binning="monotone")
+    assert not is_monotonic_woe(decile), "the synthetic feature should zig-zag under fine bins"
+    assert is_monotonic_woe(coarse)
+    assert len(coarse["table"]) < len(decile["table"])
+
+
+def test_zero_inflated_column_keeps_a_zero_bin_and_its_tail():
+    rng = np.random.default_rng(5)
+    n = 20_000
+    x = pd.Series(np.where(rng.random(n) < 0.8, 0.0, rng.exponential(30, n)))
+    y = pd.Series((rng.random(n) < np.where(x > 0, 0.05 + np.minimum(x, 100) / 400, 0.04)).astype(int))
+    coarse = fit_woe(x, y, binning="monotone")
+    labels = list(coarse["table"].index)
+    assert labels[0].endswith("0.0]"), "the zeros should form the first bin"
+    assert len(labels) >= 3, "the positive tail should not collapse into one bin"
+
+
+def test_monotone_binning_leaves_missing_in_its_own_bin():
+    x, y = _noisy_monotone(10_000)
+    x = x.copy()
+    x.iloc[:500] = np.nan
+    coarse = fit_woe(x, y, binning="monotone")
+    assert MISSING_LABEL in coarse["table"].index
+    assert coarse["table"].loc[MISSING_LABEL, "n"] == 500
+
+
+def test_unknown_binning_is_rejected():
+    x, y = _noisy_monotone(1_000)
+    with pytest.raises(ValueError):
+        fit_woe(x, y, binning="clever")

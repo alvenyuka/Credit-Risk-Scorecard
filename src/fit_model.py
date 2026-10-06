@@ -112,14 +112,15 @@ def eliminate_wrong_signs(Xs: np.ndarray, y, cols: list, fit=_sklearn_balanced):
     return kept, removed
 
 
-def fit_full_model(full: pd.DataFrame = None, verbose: bool = True) -> dict:
+def fit_full_model(full: pd.DataFrame = None, verbose: bool = True, binning: str = "decile") -> dict:
     """Fit the scorecard model on the 80/20 split and return everything later steps need.
 
     Fits WoE on the training split, applies the IV, correlation and sign gates,
     fits the from-scratch logistic regression (repeating the sign check on it) and
     cross-checks it against scikit-learn. Returns a dict with the kept features, the
     gate decisions, the WoE fits, the fitted model, the WoE matrices, holdout AUC and
-    KS, and the raw train and holdout splits.
+    KS, and the raw train and holdout splits. `binning` is passed to fit_woe for the
+    numeric features ("decile" for the published scorecard, "monotone" for coarse classing).
     """
     if full is None:
         full = build_full_feature_table()
@@ -132,7 +133,7 @@ def fit_full_model(full: pd.DataFrame = None, verbose: bool = True) -> dict:
 
     woe_fits = {}
     for col in MODEL_NUMERIC:
-        woe_fits[col] = fit_woe(X_train[col], y_train, is_categorical=False, n_bins=10)
+        woe_fits[col] = fit_woe(X_train[col], y_train, is_categorical=False, n_bins=10, binning=binning)
     for col in MODEL_CATEGORICAL:
         woe_fits[col] = fit_woe(X_train[col], y_train, is_categorical=True)
     ivs = {c: r["iv"] for c, r in woe_fits.items()}
@@ -223,6 +224,7 @@ def fit_full_model(full: pd.DataFrame = None, verbose: bool = True) -> dict:
               f"last cost change={scratch.final_cost_change_:.2e}")
 
     return {
+        "binning": binning,
         "kept_cols": kept_cols,
         "iv_ranked": iv_ranked,
         "n_candidate_features": len(woe_fits),

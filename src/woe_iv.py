@@ -33,9 +33,9 @@ MISSING_LABEL = "Missing"
 
 
 def fit_continuous_bins(x: pd.Series, n_bins: int = 10) -> np.ndarray:
+    """Bin edges at the deciles of the non-missing values, with open first and last bins."""
     # Always float64: a low-cardinality integer column (for example a 0/1 flag)
     # can make np.quantile return an int array, which cannot hold -inf.
-    """Bin edges at the deciles of the non-missing values, with open first and last bins."""
     finite = x.dropna().astype(float)
     edges = np.unique(np.quantile(finite, np.linspace(0, 1, n_bins + 1))).astype(float)
     if len(edges) < 3:
@@ -43,6 +43,52 @@ def fit_continuous_bins(x: pd.Series, n_bins: int = 10) -> np.ndarray:
     edges[0] = -np.inf
     edges[-1] = np.inf
     return edges
+
+
+def fit_monotone_bins(x: pd.Series, y: pd.Series, n_bins: int = 10, zero_share: float = 0.05) -> np.ndarray:
+    """Coarse classing: start from fine bins, then merge neighbours until the default rate moves one way.
+
+    1. Fine bins are the deciles of the non-missing values. A column that is never negative and is zero
+       for at least `zero_share` of its values (the delinquency counts, for example) gets a bin of its own
+       for 0 and deciles of its positive values, so its tail is not lost to repeated quantile edges.
+    2. The direction is the overall trend of the default rate across the fine bins (weighted by size).
+    3. Adjacent bins that go against that direction are pooled (the pool-adjacent-violators algorithm)
+       until the default rate is monotonic.
+
+    Missing values are not binned here; fit_woe gives them their own bin. Returns the merged edges.
+    """
+    finite = x.dropna().astype(float)
+    target = pd.Series(np.asarray(y), index=x.index).loc[finite.index].to_numpy(dtype=float)
+    if len(finite) == 0:
+        return fit_continuous_bins(x, n_bins)
+    if (finite >= 0).all() and (finite == 0).mean() >= zero_share and (finite > 0).any():
+        inner = np.unique(np.quantile(finite[finite > 0], np.linspace(0, 1, n_bins + 1))[1:-1])
+        edges = np.concatenate([[-np.inf, 0.0], inner[inner > 0], [np.inf]]).astype(float)
+    else:
+        edges = fit_continuous_bins(finite, n_bins)
+    if len(edges) < 3:
+        return edges
+
+    codes = pd.cut(finite, bins=edges, labels=False, include_lowest=True).to_numpy()
+    n = np.bincount(codes, minlength=len(edges) - 1).astype(float)
+    bad = np.bincount(codes, weights=target, minlength=len(edges) - 1)
+    keep = n > 0
+    uppers = edges[1:][keep]
+    n, bad = n[keep], bad[keep]
+
+    rate = bad / n
+    idx = np.arange(len(n))
+    trend = np.sum(n * (idx - np.average(idx, weights=n)) * (rate - np.average(rate, weights=n)))
+    direction = 1.0 if trend >= 0 else -1.0
+
+    blocks = []  # each block: [count, defaults, upper edge]
+    for count, defaults, upper in zip(n, bad, uppers):
+        blocks.append([count, defaults, upper])
+        while len(blocks) >= 2 and direction * (blocks[-2][1] / blocks[-2][0] - blocks[-1][1] / blocks[-1][0]) > 0:
+            last = blocks.pop()
+            blocks[-1] = [blocks[-1][0] + last[0], blocks[-1][1] + last[1], last[2]]
+    merged = np.array([-np.inf] + [b[2] for b in blocks[:-1]] + [np.inf], dtype=float)
+    return merged
 
 
 def apply_continuous_bins(x: pd.Series, edges: np.ndarray) -> pd.Series:
@@ -62,14 +108,23 @@ def _bin_labels(x: pd.Series, is_categorical: bool, edges) -> pd.Series:
 
 
 def fit_woe(x: pd.Series, y: pd.Series, is_categorical: bool = False,
-            n_bins: int = 10, epsilon: float = 0.5) -> dict:
+            n_bins: int = 10, epsilon: float = 0.5, binning: str = "decile") -> dict:
     """Fit bins and WoE for one feature on training data.
 
     Returns a dict with the bin edges (None for a categorical feature), the table of
     counts, defaults, WoE and IV contribution per bin, and the feature's total IV.
     epsilon is added to the good and bad counts so an empty bin never gives log(0).
+    binning="decile" uses decile bins (the published scorecard); binning="monotone" uses
+    fit_monotone_bins, so the default rate, and with it the WoE, moves in one direction.
     """
-    edges = None if is_categorical else fit_continuous_bins(x, n_bins)
+    if binning not in ("decile", "monotone"):
+        raise ValueError(f"unknown binning {binning!r}")
+    if is_categorical:
+        edges = None
+    elif binning == "monotone":
+        edges = fit_monotone_bins(x, y, n_bins)
+    else:
+        edges = fit_continuous_bins(x, n_bins)
     bins = _bin_labels(x, is_categorical, edges)
 
     df = pd.DataFrame({"bin": bins, "y": y.values})

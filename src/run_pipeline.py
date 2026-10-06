@@ -46,6 +46,10 @@ OUTPUTS = OUTPUT_PATH.parent
 VAL_SCORES_PATH = OUTPUTS / "val_scores.parquet"
 POINTS_PATH = OUTPUTS / "scorecard_points.json"
 BASE_SCORE, BASE_ODDS, PDO = 600, 20, 40
+# Coarse classing replaced decile bins on 2026-10-06 by the rule in src/challengers.py: its AUC on a
+# validation split of the development data was 0.0029 below the decile scorecard (limit 0.005), and
+# every numeric characteristic then has monotonic WoE. outputs/challengers.json records the comparison.
+BINNING = "monotone"
 EXAMPLE_APPROVAL_RATE = 0.8
 
 
@@ -56,7 +60,7 @@ def build_validation_scores(full=None, verbose: bool = True):
     Used by main() and by the notebook, so both describe exactly one model.
     Returns (result, sc, X_val, y_val, scores).
     """
-    result = fit_full_model(full, verbose=verbose)
+    result = fit_full_model(full, verbose=verbose, binning=BINNING)
     kept = result["kept_cols"]
     if set(kept) & set(PROHIBITED_BASES):
         raise ValueError(f"prohibited bases reached the scorecard: {set(kept) & set(PROHIBITED_BASES)}")

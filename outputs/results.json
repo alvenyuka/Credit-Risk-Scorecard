@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-10-02T21:39:30+00:00",
-  "git_commit": "c3829b2",
+  "generated_at_utc": "2026-10-06T19:01:46+00:00",
+  "git_commit": "75ef602",
   "data_source": "real",
   "python": "3.13.9",
   "packages": {
@@ -12,25 +12,30 @@
     "pyarrow": "24.0.0"
   },
   "metrics": {
-    "val_auc": 0.758533224737726,
+    "val_auc": 0.7539670402143243,
     "val_auc_ci95_bootstrap": [
-      0.7522072681582969,
-      0.765530528548522
+      0.7473056819729438,
+      0.7613108275118586
     ],
-    "val_ks": 0.3883914024511387,
-    "val_gini": 0.517066449475452,
-    "pred_corr_vs_sklearn": 0.9999989506337837,
-    "coef_diff_max_vs_sklearn": 0.001222940255121355,
+    "val_ks": 0.38145422927060574,
+    "val_gini": 0.5079340804286485,
+    "pred_corr_vs_sklearn": 0.9999987587156998,
+    "coef_diff_max_vs_sklearn": 0.0022911067264905216,
     "n_candidate_features": 62,
     "n_categorical_features": 8,
     "n_after_iv_screen": 53,
-    "n_after_correlation_gate": 49,
-    "n_features_kept": 37,
+    "n_after_correlation_gate": 47,
+    "n_features_kept": 32,
     "correlation_gate_dropped": [
       {
         "dropped": "INSTAL_SHORTFALL_SUM",
         "kept": "INSTAL_SHORTFALL_MEAN",
-        "r": 0.9273661256262989
+        "r": 0.9286023331498484
+      },
+      {
+        "dropped": "CC_BALANCE_MAX",
+        "kept": "CC_BALANCE_MEAN",
+        "r": 0.9006628752319829
       },
       {
         "dropped": "REGION_RATING_CLIENT",
@@ -38,261 +43,278 @@
         "r": 0.9447398958362355
       },
       {
-        "dropped": "PREV_AMT_CREDIT_MEAN",
-        "kept": "PREV_AMT_APPLICATION_MEAN",
-        "r": 0.9142634636584842
-      },
-      {
         "dropped": "BUREAU_OVERDUE_MEAN",
         "kept": "BUREAU_OVERDUE_MAX",
-        "r": 0.9999999999999999
+        "r": 1.0
+      },
+      {
+        "dropped": "POS_DPD_MAX",
+        "kept": "POS_DPD_MEAN",
+        "r": 0.9427559764943366
+      },
+      {
+        "dropped": "PREV_AMT_CREDIT_MEAN",
+        "kept": "PREV_AMT_APPLICATION_MEAN",
+        "r": 0.9177051868154662
       }
     ],
     "sign_gate_removed": [
       {
-        "feature": "BUREAU_OVERDUE_MAX",
-        "coefficient_at_removal": 0.11873426009394551
+        "feature": "AMT_CREDIT",
+        "coefficient_at_removal": 0.1394564801975054
       },
       {
         "feature": "BUREAU_DAYS_CREDIT_MIN",
-        "coefficient_at_removal": 0.11545638855196078
-      },
-      {
-        "feature": "AMT_CREDIT",
-        "coefficient_at_removal": 0.09967290060132554
-      },
-      {
-        "feature": "PREV_APP_COUNT",
-        "coefficient_at_removal": 0.07488096047453259
-      },
-      {
-        "feature": "PREV_DAYS_DECISION_MAX",
-        "coefficient_at_removal": 0.06295018110798413
-      },
-      {
-        "feature": "AGE_YEARS",
-        "coefficient_at_removal": 0.050233445994728114
+        "coefficient_at_removal": 0.09243965303957809
       },
       {
         "feature": "BUREAU_COUNT",
-        "coefficient_at_removal": 0.034913934378588404
+        "coefficient_at_removal": 0.11305132324295483
       },
       {
-        "feature": "NAME_INCOME_TYPE",
-        "coefficient_at_removal": 0.030669451502038553
+        "feature": "PREV_APP_COUNT",
+        "coefficient_at_removal": 0.0897613093018899
+      },
+      {
+        "feature": "PREV_DAYS_DECISION_MAX",
+        "coefficient_at_removal": 0.06708851919052822
+      },
+      {
+        "feature": "AGE_YEARS",
+        "coefficient_at_removal": 0.049445799382449925
+      },
+      {
+        "feature": "AMT_GOODS_PRICE",
+        "coefficient_at_removal": 0.0332585652484381
+      },
+      {
+        "feature": "AMT_ANNUITY",
+        "coefficient_at_removal": 0.02839611927196082
       },
       {
         "feature": "PREV_AMT_APPLICATION_MEAN",
-        "coefficient_at_removal": 0.024017811310903213
+        "coefficient_at_removal": 0.030033339646228126
       },
       {
-        "feature": "AMT_INCOME_TOTAL",
-        "coefficient_at_removal": 0.014032640827573198
+        "feature": "NAME_INCOME_TYPE",
+        "coefficient_at_removal": 0.027295966854275253
       },
       {
         "feature": "POS_DPD_MEAN",
-        "coefficient_at_removal": 0.010905464924435667
+        "coefficient_at_removal": 0.02658236694801023
+      },
+      {
+        "feature": "AMT_INCOME_TOTAL",
+        "coefficient_at_removal": 0.0043610683648875135
+      },
+      {
+        "feature": "BUREAU_CREDIT_SUM_TOTAL",
+        "coefficient_at_removal": 0.0027124039642412194
+      },
+      {
+        "feature": "BUREAU_OVERDUE_MAX",
+        "coefficient_at_removal": 0.003192518429541843
       },
       {
         "feature": "EXT_SOURCE_COUNT",
-        "coefficient_at_removal": 0.0037005843127085394
+        "coefficient_at_removal": 0.0035720310743380876
       }
     ],
     "all_coefficients_negative": true,
-    "n_numeric_features_monotonic_woe": 11,
-    "n_numeric_features_kept": 32,
+    "n_numeric_features_monotonic_woe": 27,
+    "n_numeric_features_kept": 27,
     "n_validation_rows": 61503,
     "train_bad_rate": 0.08072908198107379,
     "val_bad_rate": 0.08072776937710356,
-    "intercept_balanced": -0.0054159833872083896,
-    "intercept_prior_corrected": -2.4378979769671103,
+    "intercept_balanced": -0.0054359855870563245,
+    "intercept_prior_corrected": -2.4379179791669583,
     "implied_odds_at_base_score": 20.000000000000007,
     "observed_odds_near_base_score": {
       "score_band": [
         580,
         620
       ],
-      "n": 16270,
-      "good_to_bad": 20.521164021164022
+      "n": 16383,
+      "good_to_bad": 20.19404915912031
     },
-    "base_points_implied_odds": 11.448949475965676,
+    "base_points_implied_odds": 11.449178482431458,
     "train_good_to_bad_odds": 11.38710976837865,
-    "mean_predicted_pd_val": 0.0801582393004484,
+    "mean_predicted_pd_val": 0.08020852854003808,
     "calibration_by_decile": [
       {
         "decile": 0,
         "n": 6151,
-        "mean_predicted_pd": 0.011624787,
-        "observed_default_rate": 0.0131685905,
-        "gap": -0.0015438035
+        "mean_predicted_pd": 0.0120493342,
+        "observed_default_rate": 0.0130060153,
+        "gap": -0.000956681
       },
       {
         "decile": 1,
         "n": 6150,
-        "mean_predicted_pd": 0.0202180044,
-        "observed_default_rate": 0.0190243902,
-        "gap": 0.0011936142
+        "mean_predicted_pd": 0.0207709888,
+        "observed_default_rate": 0.0201626016,
+        "gap": 0.0006083872
       },
       {
         "decile": 2,
         "n": 6150,
-        "mean_predicted_pd": 0.0281679021,
-        "observed_default_rate": 0.0271544715,
-        "gap": 0.0010134306
+        "mean_predicted_pd": 0.028671608,
+        "observed_default_rate": 0.0300813008,
+        "gap": -0.0014096928
       },
       {
         "decile": 3,
         "n": 6150,
-        "mean_predicted_pd": 0.0368850283,
-        "observed_default_rate": 0.0339837398,
-        "gap": 0.0029012885
+        "mean_predicted_pd": 0.0374643362,
+        "observed_default_rate": 0.033495935,
+        "gap": 0.0039684013
       },
       {
         "decile": 4,
         "n": 6151,
-        "mean_predicted_pd": 0.0474123088,
-        "observed_default_rate": 0.0461713543,
-        "gap": 0.0012409546
+        "mean_predicted_pd": 0.0480210414,
+        "observed_default_rate": 0.0494228581,
+        "gap": -0.0014018167
       },
       {
         "decile": 5,
         "n": 6150,
-        "mean_predicted_pd": 0.06073376,
-        "observed_default_rate": 0.0590243902,
-        "gap": 0.0017093698
+        "mean_predicted_pd": 0.0612148153,
+        "observed_default_rate": 0.0593495935,
+        "gap": 0.0018652218
       },
       {
         "decile": 6,
         "n": 6150,
-        "mean_predicted_pd": 0.0788365334,
-        "observed_default_rate": 0.0795121951,
-        "gap": -0.0006756618
+        "mean_predicted_pd": 0.079253314,
+        "observed_default_rate": 0.082601626,
+        "gap": -0.003348312
       },
       {
         "decile": 7,
         "n": 6150,
-        "mean_predicted_pd": 0.105099691,
-        "observed_default_rate": 0.1120325203,
-        "gap": -0.0069328293
+        "mean_predicted_pd": 0.1052315566,
+        "observed_default_rate": 0.1047154472,
+        "gap": 0.0005161095
       },
       {
         "decile": 8,
         "n": 6150,
-        "mean_predicted_pd": 0.1488069646,
-        "observed_default_rate": 0.1486178862,
-        "gap": 0.0001890784
+        "mean_predicted_pd": 0.1489279938,
+        "observed_default_rate": 0.1504065041,
+        "gap": -0.0014785103
       },
       {
         "decile": 9,
         "n": 6151,
-        "mean_predicted_pd": 0.2637840236,
-        "observed_default_rate": 0.2685742156,
-        "gap": -0.0047901919
+        "mean_predicted_pd": 0.2604673031,
+        "observed_default_rate": 0.2640221102,
+        "gap": -0.0035548071
       }
     ],
-    "calibration_max_abs_gap": 0.006932829316745007,
+    "calibration_max_abs_gap": 0.003968401290408402,
     "default_rate_by_score_decile": [
       {
         "decile": 0,
         "n": 6151,
-        "score_min": 401.3720007483,
-        "score_max": 513.7150229469,
-        "default_rate": 0.2685742156
+        "score_min": 389.2102731411,
+        "score_max": 514.2486996014,
+        "default_rate": 0.2640221102
       },
       {
         "decile": 1,
         "n": 6150,
-        "score_min": 513.7156495048,
-        "score_max": 540.7208686383,
-        "default_rate": 0.1486178862
+        "score_min": 514.2493074411,
+        "score_max": 540.5554094671,
+        "default_rate": 0.1504065041
       },
       {
         "decile": 2,
         "n": 6150,
-        "score_min": 540.728480453,
-        "score_max": 560.4721034716,
-        "default_rate": 0.1120325203
+        "score_min": 540.5578811008,
+        "score_max": 560.264135587,
+        "default_rate": 0.1047154472
       },
       {
         "decile": 3,
         "n": 6150,
-        "score_min": 560.4735253182,
-        "score_max": 577.6964676453,
-        "default_rate": 0.0795121951
+        "score_min": 560.2656710824,
+        "score_max": 577.1046031388,
+        "default_rate": 0.082601626
       },
       {
         "decile": 4,
         "n": 6151,
-        "score_min": 577.6965597488,
-        "score_max": 592.8668868757,
-        "default_rate": 0.0590147943
+        "score_min": 577.1077083342,
+        "score_max": 592.3419523257,
+        "default_rate": 0.0593399447
       },
       {
         "decile": 5,
         "n": 6150,
-        "score_min": 592.8701138656,
-        "score_max": 607.8845700699,
-        "default_rate": 0.0461788618
+        "score_min": 592.3419651409,
+        "score_max": 606.9776803936,
+        "default_rate": 0.0494308943
       },
       {
         "decile": 6,
         "n": 6150,
-        "score_min": 607.8848422137,
-        "score_max": 623.1756836563,
-        "default_rate": 0.0339837398
+        "score_min": 606.9778026029,
+        "score_max": 622.4819972861,
+        "default_rate": 0.033495935
       },
       {
         "decile": 7,
         "n": 6150,
-        "score_min": 623.1757575224,
-        "score_max": 640.4980159541,
-        "default_rate": 0.0271544715
+        "score_min": 622.4847417352,
+        "score_max": 639.466485876,
+        "default_rate": 0.0300813008
       },
       {
         "decile": 8,
         "n": 6150,
-        "score_min": 640.5010455685,
-        "score_max": 663.8064153302,
-        "default_rate": 0.0190243902
+        "score_min": 639.4687827268,
+        "score_max": 661.6446827585,
+        "default_rate": 0.0201626016
       },
       {
         "decile": 9,
         "n": 6151,
-        "score_min": 663.8077304262,
-        "score_max": 791.2609908234,
-        "default_rate": 0.0131685905
+        "score_min": 661.6455332106,
+        "score_max": 787.1065944051,
+        "default_rate": 0.0130060153
       }
     ],
-    "default_rate_lowest_decile": 0.2685742155747033,
-    "default_rate_highest_decile": 0.013168590473093806,
-    "psi_train_to_holdout_scores": 0.00017457642484945097,
-    "point_biserial_score_vs_default": -0.2591224645209058,
-    "score_min": 401.3720007482617,
-    "score_max": 791.2609908233668,
+    "default_rate_lowest_decile": 0.2640221102259795,
+    "default_rate_highest_decile": 0.013006015282067957,
+    "psi_train_to_holdout_scores": 0.00019570694392003542,
+    "point_biserial_score_vs_default": -0.2544285131439043,
+    "score_min": 389.2102731411425,
+    "score_max": 787.1065944051417,
     "share_clipped_at_300": 0.0,
     "share_clipped_at_850": 0.0,
-    "mean_score_repaid": 595.0649302148897,
-    "mean_score_defaulted": 540.6305688314566,
-    "scorecard_base_points": 567.8086090670529,
+    "mean_score_repaid": 594.2659612130657,
+    "mean_score_defaulted": 541.5988846635969,
+    "scorecard_base_points": 567.809763350034,
     "scorecard_factor": 57.70780163555854,
     "scorecard_offset": 427.1228762045055,
     "example_declined_applicant": {
       "holdout_row": 156963,
       "outcome": "defaulted",
-      "score": 533.0831692253834,
-      "cut_off_score_at_80pct_approval": 540.7284804530079,
+      "score": 530.1088939008008,
+      "cut_off_score_at_80pct_approval": 540.5578811007764,
       "reasons_points_below_best_bin": [
         {
           "feature": "EXT_SOURCE_3",
-          "points": 57.76342621104526
+          "points": 58.093135946713396
         },
         {
           "feature": "NAME_EDUCATION_TYPE",
-          "points": 40.99084189650893
+          "points": 43.11357412790526
         },
         {
           "feature": "EXT_SOURCE_MEAN",
-          "points": 27.480723899055512
+          "points": 27.459641523462835
         }
       ]
     },
@@ -302,17 +324,17 @@
       "min_points_62_plus": null,
       "passed": true
     },
-    "employed_years_missing_bin_points": 8.186616849670996,
+    "employed_years_missing_bin_points": 8.480450004913795,
     "solver": {
-      "n_iter": 648,
+      "n_iter": 628,
       "max_iter": 3000,
       "tol": 1e-10,
       "converged": true,
-      "final_cost_change": 9.875122941593872e-11
+      "final_cost_change": 9.9394603658709e-11
     },
     "prohibited_basis_ablation": {
-      "val_auc_sklearn_final_features": 0.7585335738510156,
-      "val_auc_sklearn_with_prohibited_bases": 0.7598309643324845,
+      "val_auc_sklearn_final_features": 0.753962622862496,
+      "val_auc_sklearn_with_prohibited_bases": 0.7552722572457662,
       "prohibited_bases_iv": {
         "CODE_GENDER": 0.038433958519654386,
         "NAME_FAMILY_STATUS": 0.02334213450906123

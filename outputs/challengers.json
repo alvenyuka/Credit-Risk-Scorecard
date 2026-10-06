@@ -1,0 +1,106 @@
+{
+  "decision_rule": "adopt coarse classing if its validation AUC is at most 0.005 below the champion's",
+  "validation": {
+    "rows_fit": 196806,
+    "champion": {
+      "auc": 0.7545770927111046,
+      "ks": 0.38127842275989415,
+      "n_features_kept": 36,
+      "n_numeric_kept": 31,
+      "n_numeric_monotonic": 14,
+      "sign_gate_removed": [
+        "BUREAU_OVERDUE_MAX",
+        "BUREAU_DAYS_CREDIT_MIN",
+        "AMT_CREDIT",
+        "PREV_DAYS_DECISION_MAX",
+        "AGE_YEARS",
+        "BUREAU_COUNT",
+        "NAME_INCOME_TYPE",
+        "PREV_AMT_APPLICATION_MEAN",
+        "POS_DPD_MEAN",
+        "AMT_INCOME_TOTAL",
+        "BUREAU_CREDIT_SUM_TOTAL"
+      ]
+    },
+    "coarse_classing": {
+      "auc": 0.7517173497703024,
+      "ks": 0.37719893777779856,
+      "n_features_kept": 32,
+      "n_numeric_kept": 27,
+      "n_numeric_monotonic": 27,
+      "sign_gate_removed": [
+        "AMT_CREDIT",
+        "BUREAU_COUNT",
+        "BUREAU_DAYS_CREDIT_MIN",
+        "PREV_DAYS_DECISION_MAX",
+        "AGE_YEARS",
+        "AMT_GOODS_PRICE",
+        "AMT_ANNUITY",
+        "PREV_AMT_APPLICATION_MEAN",
+        "NAME_INCOME_TYPE",
+        "POS_DPD_MEAN",
+        "CC_BALANCE_MEAN",
+        "BUREAU_CREDIT_SUM_TOTAL",
+        "BUREAU_OVERDUE_MAX",
+        "AMT_INCOME_TOTAL"
+      ]
+    },
+    "lightgbm": {
+      "auc": 0.7755047381193002,
+      "n_trees": 584
+    }
+  },
+  "coarse_classing_auc_loss_validation": 0.002859742940802268,
+  "decision": "adopt coarse classing",
+  "holdout": {
+    "champion": {
+      "auc": 0.758533224737726,
+      "ks": 0.3883914024511387,
+      "n_features_kept": 37,
+      "n_numeric_kept": 32,
+      "n_numeric_monotonic": 11,
+      "sign_gate_removed": [
+        "BUREAU_OVERDUE_MAX",
+        "BUREAU_DAYS_CREDIT_MIN",
+        "AMT_CREDIT",
+        "PREV_APP_COUNT",
+        "PREV_DAYS_DECISION_MAX",
+        "AGE_YEARS",
+        "BUREAU_COUNT",
+        "NAME_INCOME_TYPE",
+        "PREV_AMT_APPLICATION_MEAN",
+        "AMT_INCOME_TOTAL",
+        "POS_DPD_MEAN",
+        "EXT_SOURCE_COUNT"
+      ]
+    },
+    "coarse_classing": {
+      "auc": 0.7539670402143243,
+      "ks": 0.38145422927060574,
+      "n_features_kept": 32,
+      "n_numeric_kept": 27,
+      "n_numeric_monotonic": 27,
+      "sign_gate_removed": [
+        "AMT_CREDIT",
+        "BUREAU_DAYS_CREDIT_MIN",
+        "BUREAU_COUNT",
+        "PREV_APP_COUNT",
+        "PREV_DAYS_DECISION_MAX",
+        "AGE_YEARS",
+        "AMT_GOODS_PRICE",
+        "AMT_ANNUITY",
+        "PREV_AMT_APPLICATION_MEAN",
+        "NAME_INCOME_TYPE",
+        "POS_DPD_MEAN",
+        "AMT_INCOME_TOTAL",
+        "BUREAU_CREDIT_SUM_TOTAL",
+        "BUREAU_OVERDUE_MAX",
+        "EXT_SOURCE_COUNT"
+      ]
+    },
+    "lightgbm": {
+      "auc": 0.7807560775012978
+    }
+  },
+  "interpretability_price_holdout_auc": 0.022222852763571832
+}

@@ -7,7 +7,7 @@ From-scratch WoE/IV and logistic regression on Home Credit's 307,511 real loan a
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../LICENSE)
 [![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)](#tech-stack)
 [![scikit-learn](https://img.shields.io/badge/scikit--learn-F7931E?style=flat&logo=scikit-learn&logoColor=white)](#tech-stack)
-[![AUC](https://img.shields.io/badge/AUC-0.759-success)](#results)
+[![AUC](https://img.shields.io/badge/AUC-0.754-success)](#results)
 [![tests](https://github.com/alvenyuka/Credit-Risk-Scorecard/actions/workflows/ci.yml/badge.svg)](https://github.com/alvenyuka/Credit-Risk-Scorecard/actions/workflows/ci.yml)
 
 A credit scorecard for Home Credit's loan applicants, built from Weight of
@@ -33,7 +33,7 @@ here and could not answer that question directly.
 
 So this is a scorecard: Weight of Evidence bins, a logistic regression over them,
 and a points table where every bin contributes a fixed number of points. A
-declined applicant's reasons come back as "57.8 points below the best band on an
+declined applicant's reasons come back as "58.1 points below the best band on an
 external bureau score" rather than a probability with no account of itself. The
 direction of every characteristic is enforced, and each bin's WoE and points can
 be read off a table before the model is used.
@@ -164,6 +164,12 @@ commits use the old names.
    `src/` and checked against scikit-learn and scipy. KS is computed per distinct
    score, because a row-by-row version evaluates the gap inside blocks of tied
    scores, which a bucketed scorecard produces.
+   **Binning (coarse classing).** Numeric features start from decile bins; a column
+   that is never negative and zero for at least 5% of applicants gets a bin of its
+   own for 0 and deciles of its positive values. Neighbouring bins are then merged
+   (pool-adjacent-violators) until the default rate moves in one direction, so every
+   numeric characteristic's WoE, and with it its points, is monotonic
+   (`fit_monotone_bins` in `src/woe_iv.py`). Missing values keep a bin of their own.
 3. **Relational features.** Credit-bureau records, previous applications,
    instalment and card-balance history are aggregated per applicant, giving 62
    candidate features. Sex and marital status are excluded as prohibited bases.
@@ -174,20 +180,20 @@ commits use the old names.
    appeared as a reason that penalised a lower-risk, largely pensioner group.
 4. **Screening.** All on the training split. Features with IV below 0.01 are
    dropped (53 of 62 remain). Of any pair of WoE columns correlated above 0.9, the
-   higher-IV feature is kept (4 dropped, 49 remain). Then the sign gate: WoE is
+   higher-IV feature is kept (6 dropped, 47 remain). Then the sign gate: WoE is
    ln(good/bad), so in a model of the probability of default every coefficient
    must be negative. A positive coefficient means a feature's effect has reversed
    once correlated features are in the model; kept, it would award points to the
    riskier bins. The feature with the largest positive coefficient is removed and
-   the model refitted until none remains; 12 features are removed this way,
-   leaving 37. The gate runs on scikit-learn's fit for speed and finishes on the
+   the model refitted until none remains; 15 features are removed this way,
+   leaving 32. The gate runs on scikit-learn's fit for speed and finishes on the
    from-scratch fit the scorecard uses. Every removal is listed in
    `outputs/results.json` (`correlation_gate_dropped`, `sign_gate_removed`).
 5. **Fit.** A class-balanced logistic regression on standardised WoE values. The
-   from-scratch solver converged (change in cost below 1e-10 after 648 of at most
+   from-scratch solver converged (change in cost below 1e-10 after 628 of at most
    3,000 iterations, recorded in `results.json`) and matches scikit-learn's fit of
    the same objective to a prediction correlation of 0.999999 and a maximum
-   coefficient difference of 0.0012.
+   coefficient difference of 0.0023.
 6. **Scorecard.** Balanced weights fit the intercept as if half of all applicants
    defaulted. The intercept is shifted back to the training default rate of 8.07%
    (King and Zeng's prior correction, from -0.0054 to -2.4379), which leaves the
@@ -196,15 +202,27 @@ commits use the old names.
    between an applicant's points on a characteristic and the most that
    characteristic can give, ranked largest first, so a characteristic on which the
    applicant scored the maximum is never a reason. For a defaulted holdout applicant
-   who scored 533, below the 541 cut-off of the 80% approval policy, the reasons are
-   `EXT_SOURCE_3` 57.8 points, `NAME_EDUCATION_TYPE` 41.0 points and
+   who scored 530, below the 541 cut-off of the 80% approval policy, the reasons are
+   `EXT_SOURCE_3` 58.1 points, `NAME_EDUCATION_TYPE` 43.1 points and
    `EXT_SOURCE_MEAN` 27.5 points below the best bin.
 7. **Acceptance checks.** Every run asserts that all coefficients are negative,
    that no prohibited basis is in the scorecard, and that no bin covering age 62
    or over has negative points (Regulation B, 12 CFR 1002.6(b)(2)). `AGE_YEARS` is
-   one of the 12 features the sign gate removed, so age is not in the scorecard;
+   one of the 15 features the sign gate removed, so age is not in the scorecard;
    the check records that and passes. The `Missing` bin of `EMPLOYED_YEARS`
-   (pensioners and the unemployed) carries +8.2 points.
+   (pensioners and the unemployed) carries +8.5 points.
+8. **Champion against challengers.** `src/challengers.py` tested two changes on the
+   development applicants only, with the decision rule fixed beforehand and the
+   holdout reported afterwards for information (`outputs/challengers.json`):
+   - *Coarse classing against decile bins.* Adopt if it costs at most 0.005 AUC on
+     a validation slice of the development data. It cost 0.0029 (0.7546 to 0.7517)
+     and raised the numeric characteristics with monotonic WoE from 14 of 31 to 27
+     of 27, so it was adopted. On the holdout the decile scorecard had AUC 0.7585
+     and the coarse-classed one 0.7540.
+   - *LightGBM on the same 62 candidates*, a benchmark for the cost of
+     interpretability: validation AUC 0.7755, holdout 0.7808, which is 0.0268 above
+     the scorecard. It is not a candidate for the lending decision, because it
+     cannot give a fixed reason for a decline.
 
 ## Results
 
@@ -217,19 +235,19 @@ The Old pipeline column is read from the pre-rebuild README and `BUILD_STATUS.md
 at commit `a8708a0~1`; every figure in the This rebuild column is in
 `results.json`.
 
-`results.json` records `git_commit: c3829b2`, the commit the run started from,
+`results.json` records `git_commit: 75ef602`, the commit the run started from,
 because the run was made before its code was committed; the code that produced
-these figures is commit `9efc5ec`.
+these figures is the commit that adds coarse classing (`src/challengers.py`).
 
 | | This rebuild | Old pipeline |
 |---|---:|---:|
-| AUC | 0.7585 | 0.751 |
-| AUC, 95% bootstrap interval (500 resamples) | 0.7522 to 0.7655 | not reported |
-| KS | 0.3884 | 0.377 to 0.381 |
-| GINI | 0.5171 | not reported |
+| AUC | 0.7540 | 0.751 |
+| AUC, 95% bootstrap interval (500 resamples) | 0.7473 to 0.7613 | not reported |
+| KS | 0.3815 | 0.377 to 0.381 |
+| GINI | 0.5079 | not reported |
 | Prediction correlation vs scikit-learn | 0.999999 | 0.9985 |
-| Max coefficient difference vs scikit-learn | 0.0012 | 0.298 |
-| Features kept after selection | 37 | 80 |
+| Max coefficient difference vs scikit-learn | 0.0023 | 0.298 |
+| Features kept after selection | 32 | 80 |
 | Candidate features | 62 | 400 |
 | Categorical features among the candidates | 8 | 0 |
 
@@ -243,17 +261,17 @@ pipeline dropped (occupation type, organisation type) carry signal.
 
 For completeness, the old pipeline also ran a LightGBM benchmark that reached AUC
 0.7774, higher than either from-scratch model here. The 0.751 above is its
-from-scratch LR, which is the like-for-like comparison. This rebuild has no tree
-benchmark at all.
+from-scratch LR, which is the like-for-like comparison. This rebuild's own
+LightGBM benchmark reaches 0.7808 on the same holdout (Methodology, step 8).
 
-The coefficient difference is the interesting column. On this 37-feature set the
-from-scratch solver lands within 0.0012 of scikit-learn; the old pipeline's
+The coefficient difference is the interesting column. On this 32-feature set the
+from-scratch solver lands within 0.0023 of scikit-learn; the old pipeline's
 80-feature set diverged by 0.298. That gap is not a better solver, it is less
 redundancy in the feature set: the old version selected four engineered variants
 of the same three `EXT_SOURCE` columns, and near-duplicate predictors make
 coefficients unstable without hurting predictions.
 
-![Default rate by score decile, falling from 26.9% in the lowest band to 1.3% in the highest](../figures/default_rate_by_band.png)
+![Default rate by score decile, falling from 26.4% in the lowest band to 1.3% in the highest](../figures/default_rate_by_band.png)
 
 ![Score distribution for applicants who repaid and who defaulted](../figures/score_distribution.png)
 
@@ -267,38 +285,39 @@ and their three components sit at IV 0.15 to 0.33 individually. The mean of them
 is stronger than any one, which is what an average of three noisy scores of the
 same thing should be.
 
-WoE tables are kept in bin order. Of the 32 numeric features kept, 11 have WoE that
-moves in one direction across their bins; the others have at least one reversal
-between neighbouring deciles. Every bin, its WoE and its points are in
+WoE tables are kept in bin order. All 27 numeric features kept have WoE that moves
+in one direction across their bins, because coarse classing merges any reversal
+(with decile bins, 11 of the 32 kept then were monotonic). Every bin, its WoE and its points are in
 [`outputs/scorecard_points.json`](../outputs/scorecard_points.json) for review.
 
 ### Is the model calibrated, and does it separate?
 
 After the prior correction, predicted default rates match observed rates within
-0.7 percentage points in every decile of the holdout, so the score reads as a
+0.4 percentage points in every decile of the holdout, so the score reads as a
 probability of default; how it holds on a later population is untested. The mean
 predicted PD on the holdout is 8.02% against an observed 8.07%. The anchor holds
 empirically too: the scorecard assigns 20:1 good-to-bad odds at 600, and the
-16,270 holdout applicants scoring 580 to 620 repaid at 20.5 to 1. The full decile
+16,383 holdout applicants scoring 580 to 620 repaid at 20.2 to 1. The full decile
 table is `calibration_by_decile` in `results.json`.
 
-Separation: AUC 0.7585 (95% bootstrap interval 0.7522 to 0.7655), KS 0.3884,
-GINI 0.5171. Stability: the PSI between training and holdout scores is 0.0002,
+Separation: AUC 0.7540 (95% bootstrap interval 0.7473 to 0.7613), KS 0.3815,
+GINI 0.5079. Stability: the PSI between training and holdout scores is 0.0002,
 as expected for a random split; it is the baseline for monitoring drift once the
 scorecard is in use.
 
 ### Score distribution
 
-Mean score 595.1 for applicants who repaid, 540.6 for those who defaulted. The
-observed range on the holdout is 401 to 791 within the 300 to 850 clipping range,
+Mean score 594.3 for applicants who repaid, 541.6 for those who defaulted. The
+observed range on the holdout is 389 to 787 within the 300 to 850 clipping range,
 and no applicant is clipped. The point-biserial correlation between score and
-default is -0.259: higher score, lower risk, which is the direction a scorecard
+default is -0.254: higher score, lower risk, which is the direction a scorecard
 has to have before anything else about it matters.
 
 ## Recommendation
 
 Logistic regression on Weight of Evidence features, not a gradient-boosted
-model, even though the tree model would probably score higher. A declined
+model, even though a tree model ranks applicants better: LightGBM reaches a
+holdout AUC 0.0268 higher (Methodology, step 8). A declined
 applicant is often legally entitled to a specific reason, and this scorecard
 gives one directly. The direction of every characteristic is enforced and each
 WoE table can be checked before the model is used, instead of trusting that a
@@ -309,18 +328,18 @@ What it does not do is listed under Known Limitations below, once each.
 
 ## Known Limitations
 
-- **Calibration is checked on a random holdout only.** After the prior correction, predicted default rates match observed rates within 0.7 percentage points in every decile of the holdout, so the score reads as a probability of default; how it holds on a later population is untested.
+- **Calibration is checked on a random holdout only.** After the prior correction, predicted default rates match observed rates within 0.4 percentage points in every decile of the holdout, so the score reads as a probability of default; how it holds on a later population is untested.
 - **Validation split is random, and an out-of-time split is not possible on this data.** `application_train.csv` carries no absolute application date: every temporal field is a day offset relative to the application itself. There is no column to sort on, so a forward time split cannot be constructed here at all. It is a property of the dataset, not a to-do. Doing it properly needs a source with real application timestamps.
 - **The thresholds, the cut-offs and the reported metrics share one holdout.** The gates are fitted on the training split, but the 0.01 IV threshold and the business cut-offs were chosen with this holdout in view; the bootstrap interval covers sampling noise, not that choice.
-- **Prohibited bases are excluded.** `CODE_GENDER` and `NAME_FAMILY_STATUS` are sex and marital status, prohibited bases under ECOA and Regulation B, so they never enter any feature list (`PROHIBITED_BASES` in `src/feature_lists.py`, pinned by `tests/test_fair_lending.py`). Adding them back to the final feature set would move AUC from 0.7585 to 0.7598 (scikit-learn, same split, `prohibited_basis_ablation` in `results.json`). `CNT_FAM_MEMBERS`, `CNT_CHILDREN` and `INCOME_PER_FAM_MEMBER` can act as proxies for marital status and were reviewed: all three fall below the IV gate, so none is in the scorecard (`outputs/scorecard_points.json` lists every kept feature). Age is not in the scorecard either (see Methodology, step 7).
-- **Quantile binning collapses zero-inflated columns.** `fit_continuous_bins` takes deciles and dedupes the edges, so a column where most applicants sit at zero (the delinquency and overdue aggregates) loses its entire non-zero tail to one or two bins, and a 0/1 flag collapses to a single bin with IV exactly 0. Two consequences visible in this run: `BUREAU_OVERDUE_MAX` and `BUREAU_OVERDUE_MEAN` land on the identical two-bin split and correlate at r = 1.000 once WoE-encoded (the correlation gate drops one), and three delinquency features fall below the IV gate and are dropped. Supervised or zero-aware binning would keep them. `tests/test_woe_iv.py` pins the behaviour so a fix cannot land silently.
+- **Prohibited bases are excluded.** `CODE_GENDER` and `NAME_FAMILY_STATUS` are sex and marital status, prohibited bases under ECOA and Regulation B, so they never enter any feature list (`PROHIBITED_BASES` in `src/feature_lists.py`, pinned by `tests/test_fair_lending.py`). Adding them back to the final feature set would move AUC from 0.7540 to 0.7553 (scikit-learn, same split, `prohibited_basis_ablation` in `results.json`). `CNT_FAM_MEMBERS`, `CNT_CHILDREN` and `INCOME_PER_FAM_MEMBER` can act as proxies for marital status and were reviewed: all three fall below the IV gate, so none is in the scorecard (`outputs/scorecard_points.json` lists every kept feature). Age is not in the scorecard either (see Methodology, step 7).
+- **Zero-inflated columns are only partly rescued.** Coarse classing gives 0 a bin of its own in a column that is mostly zero, so the delinquency aggregates keep some of their tail. Merging for monotonicity can still leave two such columns on the same split: `BUREAU_OVERDUE_MAX` and `BUREAU_OVERDUE_MEAN` correlate at r = 1.000 once WoE-encoded, and the correlation gate drops one. `tests/test_woe_iv.py` pins both the decile behaviour and the zero bin.
 - **PD only, not a full IFRS 9 loss estimate.** This scorecard outputs a probability of default; loss given default and exposure at default are separate models not built here.
 - **The rebuild-vs-old-pipeline comparison in Results isn't a controlled benchmark**: different train/test splits, not an apples-to-apples A/B.
 
 ## Tests
 
 ```bash
-python -m pytest        # 65 tests, about 20 seconds
+python -m pytest        # 69 tests, about 20 seconds
 ```
 
 The from-scratch implementations are the whole point of this repo, so they are
@@ -373,7 +392,8 @@ CI installs `requirements-test.txt`, pinned to the same versions as
 - [x] Calibrate base odds to this dataset's default rate (prior-corrected intercept)
 - [x] Drop ECOA-prohibited bases from the candidate set and refit
 - [x] Coefficient-sign, correlation and Regulation B age checks on every run
-- [ ] Zero-aware or supervised binning for the delinquency columns
+- [x] Zero-aware, monotonic coarse classing (adopted by a champion-challenger rule, `src/challengers.py`)
+- [x] LightGBM benchmark for the cost of interpretability
 - [ ] LGD/EAD models for a full IFRS 9 loss estimate
 - Out-of-time validation split: not possible on this dataset, see Known Limitations
 

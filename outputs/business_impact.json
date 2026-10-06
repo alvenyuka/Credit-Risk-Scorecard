@@ -22,38 +22,38 @@
     {
       "approval_rate": 0.9,
       "approved": 55353,
-      "cut_off_score": 513.715022946885,
-      "default_rate_approved": 0.059852221198489694,
-      "credit_loss": 892680021.0,
-      "loss_avoided_vs_approve_all": 356230950.97500014,
-      "loss_avoided_pct": 0.28523326239312674,
-      "good_borrowers_declined": 4498,
-      "good_borrowers_declined_pct": 0.0795571120308465,
-      "credit_approved": 33891259423.5
+      "cut_off_score": 514.2486996013967,
+      "default_rate_approved": 0.06035806550683793,
+      "credit_loss": 891077926.0500001,
+      "loss_avoided_vs_approve_all": 357833045.9250001,
+      "loss_avoided_pct": 0.28651605595163504,
+      "good_borrowers_declined": 4526,
+      "good_borrowers_declined_pct": 0.08005235416887757,
+      "credit_approved": 33816363417.0
     },
     {
       "approval_rate": 0.8,
       "approved": 49202,
-      "cut_off_score": 540.7284804530079,
-      "default_rate_approved": 0.048758180561765785,
-      "credit_loss": 671086215.0,
-      "loss_avoided_vs_approve_all": 577824756.9750001,
-      "loss_avoided_pct": 0.46266288786080634,
-      "good_borrowers_declined": 9735,
-      "good_borrowers_declined_pct": 0.1721850790618699,
-      "credit_approved": 30742837501.5
+      "cut_off_score": 540.5578811007764,
+      "default_rate_approved": 0.049103694971749115,
+      "credit_loss": 664971541.2,
+      "loss_avoided_vs_approve_all": 583939430.7750001,
+      "loss_avoided_pct": 0.46755889240973775,
+      "good_borrowers_declined": 9752,
+      "good_borrowers_declined_pct": 0.17248576178853162,
+      "credit_approved": 30641437827.0
     },
     {
       "approval_rate": 0.7,
       "approved": 43052,
-      "cut_off_score": 560.4735253181902,
-      "default_rate_approved": 0.03971940908668587,
-      "credit_loss": 497141576.325,
-      "loss_avoided_vs_approve_all": 751769395.6500001,
-      "loss_avoided_pct": 0.601939940091301,
-      "good_borrowers_declined": 15196,
-      "good_borrowers_declined_pct": 0.26877498319714177,
-      "credit_approved": 27475798927.5
+      "cut_off_score": 560.2656710824496,
+      "default_rate_approved": 0.04115952801263588,
+      "credit_loss": 496571241.15000004,
+      "loss_avoided_vs_approve_all": 752339730.825,
+      "loss_avoided_pct": 0.6023966060889566,
+      "good_borrowers_declined": 15258,
+      "good_borrowers_declined_pct": 0.2698715907884962,
+      "credit_approved": 27297708606.0
     }
   ]
 }
