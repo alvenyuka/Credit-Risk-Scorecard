@@ -1,0 +1,20 @@
+{
+  "run_date_utc": "2026-10-09",
+  "runtime_minutes": 11,
+  "peak_memory_gb": 2.6,
+  "git_commit": "1178122fc04de5334b85b3cbef52b7e7abb67ef4",
+  "uncommitted_code_changes": true,
+  "python": "3.13.9",
+  "packages": {
+    "numpy": "2.4.6",
+    "pandas": "3.0.3",
+    "scikit-learn": "1.8.0",
+    "scipy": "1.17.1",
+    "matplotlib": "3.9.2",
+    "seaborn": "0.13.2"
+  },
+  "results_checked_against": "outputs/results.json",
+  "entries_checked": 46,
+  "holdout_auc": 0.7539670402143243,
+  "characteristics_kept": 32
+}

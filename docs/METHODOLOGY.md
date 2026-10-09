@@ -114,7 +114,8 @@ figs/                         four charts from an earlier pipeline (kept for the
 ## Dataset
 
 Download the 8 CSVs from [Home Credit Default Risk on Kaggle](https://www.kaggle.com/competitions/home-credit-default-risk)
-and put them in `data/` (not shipped in this repo), or point `HOME_CREDIT_DATA_DIR` at them.
+and put them in `data/` (not shipped in this repo). The pipeline scripts also accept `HOME_CREDIT_DATA_DIR`
+pointing elsewhere; the notebook reads `data/` directly with `pd.read_csv`.
 
 ## Running it
 

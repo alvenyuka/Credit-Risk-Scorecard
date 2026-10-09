@@ -115,9 +115,12 @@ flowchart LR
   above the scorecard. That is the price of a model whose every point has a reason; it is recorded in
   [`outputs/challengers.json`](outputs/challengers.json), and LightGBM is a benchmark only.
 
-The notebook [`Credit_Risk_Scorecard.ipynb`](Credit_Risk_Scorecard.ipynb) teaches these stages from scratch: it
-starts with a toy points table, introduces each idea on a small example before the real data, and asserts that
-its step-by-step build equals the tested pipeline.
+The notebook [`Credit_Risk_Scorecard.ipynb`](Credit_Risk_Scorecard.ipynb) builds the scorecard step by step in
+four parts: what the data can support (the application table loaded with `pd.read_csv`, checked and explored,
+the six history tables rolled up to one row per applicant, the holdout kept back), building the scorecard (WoE
+and IV by hand and then on every candidate, the three gates, the from-scratch fit, points), validation and use
+(ROC, KS, calibration, PSI, fair lending, the approval policy, a decline explained), and limits and record. It
+asserts that its step-by-step build equals the tested pipeline and that every figure equals `outputs/results.json`.
 
 ## What drives the score
 
@@ -179,8 +182,10 @@ outputs/business_impact.json  approval-policy table with its assumptions
 outputs/scorecard_points.json the points for every bin of every kept characteristic
 outputs/challengers.json      the champion-challenger comparison behind coarse classing, and the LightGBM benchmark
 figures/                      charts drawn from the same model
-figs/, output/                charts and demo data from an earlier pipeline, kept for its demo page
-Credit_Risk_Scorecard.ipynb   teaching walkthrough in scorecard-development order, executed end to end
+figs/                         charts drawn by the notebook (plus four from an earlier pipeline, kept for its demo page)
+output/                       demo data from that earlier pipeline
+outputs/notebook_run.json     date, runtime, memory and library versions of the stored notebook run
+Credit_Risk_Scorecard.ipynb   the analysis in four parts, executed end to end; its charts are in figs/
 build_notebook.py             generates the notebook (edit this, not the .ipynb)
 docs/METHODOLOGY.md           full method, results and test descriptions
 ```
