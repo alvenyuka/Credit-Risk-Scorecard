@@ -188,9 +188,12 @@ outputs/notebook_run.json     date, runtime, memory and library versions of the 
 Credit_Risk_Scorecard.ipynb   the analysis in four parts, executed end to end; its charts are in figs/
 build_notebook.py             generates the notebook (edit this, not the .ipynb)
 docs/METHODOLOGY.md           full method, results and test descriptions
+notes/                        the week-by-week build log, mistakes and corrections included
 ```
 
 The full method, every result and the test suite are described in [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md).
+How the scorecard was built from a blind rebuild, including two bugs found in the process, is in
+[`notes/`](notes/README.md).
 
 ## License
 
