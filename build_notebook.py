@@ -60,8 +60,9 @@ around them rather than around a single model:
 - **Part 3, validation and use** (sections 11 and 12): ranking, calibration, stability and fair-lending checks
   on the holdout, the price of a readable model against gradient boosting, the approval policy a credit
   committee could choose, and a decline explained.
-- **Part 4, limits and record** (sections 13 and 14): what the results cannot show, and a check that every
-  figure shown equals the one the tested pipeline wrote to `outputs/results.json`.
+- **Part 4, limits and record** (sections 13 to 15): what the results cannot show, a decision log of every
+  modelling choice with the alternative and the evidence, and a check that every figure shown equals the one
+  the tested pipeline wrote to `outputs/results.json`.
 
 Each step is one short code cell with an explanation of what it does and what its output shows. Boxes marked
 **Try it** suggest a change to rerun. Cells containing **Check** assertions stop the notebook at the step that
@@ -1691,17 +1692,138 @@ md("""
 """)
 
 # =====================================================================
-# 14. RESULTS CHECK
+# 14. DECISION LOG
 # =====================================================================
 md("""
 ---
-## 14. Results check and run record
+## 14. Decision log
+
+Every choice that shaped the scorecard, with the alternative it was weighed against, the evidence that settled
+it and the trade-off accepted. A credit committee or model validator reviews a scorecard through exactly this
+record. The evidence column is filled in by code from this notebook's results and `outputs/`, not typed by hand,
+so it cannot drift from the numbers above. How these choices were first reached, including two bugs found and
+fixed on the way, is in the build log in [`notes/`](notes/README.md).
+
+**Step 14.1:** Build the log from the run's own results.
+""")
+
+code("""
+from IPython.display import Markdown, display
+
+from results_io import read_results
+
+m = summary
+ch_val = challengers["validation"]
+# The fit with sex and marital status added is run only by the pipeline (src/fit_model.py), so read its result
+ablation = read_results()["metrics"]["prohibited_basis_ablation"]
+pdo = m["scorecard_factor"] * np.log(2)
+near = m["observed_odds_near_base_score"]
+top80 = policy.loc[np.isclose(policy["approval_rate"], 0.8)].iloc[0]
+overdue = next(d for d in m["correlation_gate_dropped"] if d["dropped"] == "BUREAU_OVERDUE_MEAN")
+
+decisions = [
+    ("Leave out sex and marital status (6.1)",
+     "Use them: IV {:.3f} and {:.3f}".format(*ablation["prohibited_bases_iv"].values()),
+     f"holdout AUC {ablation['val_auc_sklearn_final_features']:.4f} without them, "
+     f"{ablation['val_auc_sklearn_with_prohibited_bases']:.4f} with them",
+     f"{ablation['val_auc_sklearn_with_prohibited_bases'] - ablation['val_auc_sklearn_final_features']:.4f} AUC "
+     "given up; required by ECOA and Regulation B"),
+    ("Read DAYS_EMPLOYED = 365243 as missing, with its own bin (3.1, 6.1)",
+     "Keep the raw value (about 1,000 years in work)",
+     f"{int(positive.sum()):,} applicants carry the placeholder; their missing bin earns "
+     f"{m['employed_years_missing_bin_points']:.1f} points, so pensioners are not penalised",
+     "none found; ratios built on employment stay sane"),
+    ("Random 80/20 holdout, stratified on default (6.3)",
+     "Out-of-time holdout (impossible: no application dates)",
+     f"{len(X_val):,} held out; default rate {m['train_bad_rate']:.2%} training, {m['val_bad_rate']:.2%} holdout",
+     "drift over time is untested (section 13)"),
+    ("Coarse classing over plain decile bins (8.1)",
+     "Decile bins, the champion",
+     f"monotonic numeric characteristics {ch_val['coarse_classing']['n_numeric_monotonic']} of "
+     f"{ch_val['coarse_classing']['n_numeric_kept']}, against {ch_val['champion']['n_numeric_monotonic']} of "
+     f"{ch_val['champion']['n_numeric_kept']}; rule: {challengers['decision_rule']}",
+     f"{challengers['coarse_classing_auc_loss_validation']:.4f} validation AUC"),
+    (f"Gate 1: keep characteristics with IV >= {IV_THRESHOLD} (9)",
+     "A stricter screen",
+     f"{m['n_after_iv_screen']} of {m['n_candidate_features']} candidates pass",
+     "permissive on purpose; gates 2 and 3 remove redundancy and flipped effects"),
+    (f"Gate 2: of any WoE pair with |r| > {CORRELATION_THRESHOLD}, keep the higher-IV one (9)",
+     "Keep both and let the fit split the weight",
+     f"{len(m['correlation_gate_dropped'])} dropped, e.g. {overdue['dropped']} (r = {overdue['r']:.3f} "
+     f"with {overdue['kept']})",
+     "a little signal in the dropped partner"),
+    ("Gate 3: drop any characteristic whose coefficient flips sign (9)",
+     "Keep it for its AUC contribution",
+     f"{len(m['sign_gate_removed'])} removed; all {m['n_features_kept']} kept coefficients negative: "
+     f"{m['all_coefficients_negative']}",
+     "the gate does not show which characteristic absorbed the effect (section 13)"),
+    ("Logistic regression written from scratch, checked against scikit-learn (10)",
+     "scikit-learn alone",
+     f"max coefficient difference {m['coef_diff_max_vs_sklearn']:.4f}, prediction correlation "
+     f"{m['pred_corr_vs_sklearn']:.6f}",
+     "more code to test (tests/test_from_scratch_lr.py)"),
+    ("Class-balanced fit, then correct the intercept to the true default rate (10.5)",
+     "Unweighted fit, or no correction",
+     f"intercept {m['intercept_balanced']:+.3f} -> {m['intercept_prior_corrected']:+.3f}; mean predicted PD "
+     f"{m['mean_predicted_pd_val']:.2%} against {m['val_bad_rate']:.2%} observed; largest decile gap "
+     f"{m['calibration_max_abs_gap']:.4f}",
+     "one extra step that must be repeated on every refit"),
+    (f"Scale: 600 points at 20:1 good-to-bad odds, {pdo:.0f} points to double the odds (10.1)",
+     f"Anchor 600 to the training population's own odds ({m['train_good_to_bad_odds']:.1f}:1)",
+     f"implied odds at 600: {m['implied_odds_at_base_score']:.1f}:1; observed in the {near['score_band'][0]} to "
+     f"{near['score_band'][1]} band: {near['good_to_bad']:.1f}:1 ({near['n']:,} applicants)",
+     "a policy convention, not a statistic; a lender would use its own scale"),
+    ("A points scorecard rather than gradient boosting (11.7, 12)",
+     "LightGBM on the same candidates",
+     f"holdout AUC {m['val_auc']:.4f} against LightGBM {challengers['holdout']['lightgbm']['auc']:.4f}",
+     f"{challengers['holdout']['lightgbm']['auc'] - m['val_auc']:.4f} AUC paid for a fixed reason on every decline"),
+    ("Price policies with one 45% loss given default (12.1)",
+     "A modelled LGD (impossible: no recovery data)",
+     f"approving the top 80% (score {top80['cut_off_score']:.0f}+) avoids {top80['loss_avoided_pct']:.0%} of loss "
+     f"and declines {top80['good_borrowers_declined_pct']:.0%} of good borrowers",
+     "loss side only; margin on good loans ignored (section 13)"),
+]
+
+log = pd.DataFrame(decisions, columns=["Decision", "Alternative considered", "Evidence from this run", "Trade-off accepted"])
+
+
+def markdown_table(df):
+    # A plain markdown table; pipes inside cells (as in |r|) are escaped so they don't split columns
+    cell = lambda v: str(v).replace("|", "\\\\|")
+    rows = [df.columns, ["---"] * df.shape[1], *df.itertuples(index=False)]
+    return "\\n".join("| " + " | ".join(cell(v) for v in r) + " |" for r in rows)
+
+
+display(Markdown(markdown_table(log)))
+""")
+
+code("""
+# Check: every decision rests on a passing result, not just a description
+assert len(log) == 12 and log.notna().all().all()
+assert ablation["val_auc_sklearn_with_prohibited_bases"] - ablation["val_auc_sklearn_final_features"] < 0.005
+assert challengers["decision"] == "adopt coarse classing"
+assert challengers["coarse_classing_auc_loss_validation"] <= 0.005
+assert m["all_coefficients_negative"] and abs(m["implied_odds_at_base_score"] - 20) < 1e-6
+assert abs(pdo - 40) < 1e-6 and m["calibration_max_abs_gap"] < 0.01
+""")
+
+md("""
+Read down the trade-off column and the pattern is consistent: wherever readability, fairness or a defensible
+reason competed with ranking power, the scorecard gave up some AUC, and the log records exactly how much.
+""")
+
+# =====================================================================
+# 15. RESULTS CHECK
+# =====================================================================
+md("""
+---
+## 15. Results check and run record
 
 The pipeline (`python src/run_pipeline.py`) writes every headline metric to `outputs/results.json`, with the
 package versions and the git commit of the run. The notebook built the same model by hand, so every figure it
 shows must equal the one in that file.
 
-**Step 14.1:** Compare every entry.
+**Step 15.1:** Compare every entry.
 """)
 
 code("""
@@ -1730,7 +1852,7 @@ print(f"notebook figures match outputs/results.json ({len(summary)} entries chec
 """)
 
 md("""
-**Step 14.2:** Record this run: date, runtime, peak memory, code version and library versions, written to
+**Step 15.2:** Record this run: date, runtime, peak memory, code version and library versions, written to
 `outputs/notebook_run.json` next to the pipeline's results.
 """)
 

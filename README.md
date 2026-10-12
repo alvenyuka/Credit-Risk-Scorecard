@@ -119,7 +119,9 @@ The notebook [`Credit_Risk_Scorecard.ipynb`](Credit_Risk_Scorecard.ipynb) builds
 four parts: what the data can support (the application table loaded with `pd.read_csv`, checked and explored,
 the six history tables rolled up to one row per applicant, the holdout kept back), building the scorecard (WoE
 and IV by hand and then on every candidate, the three gates, the from-scratch fit, points), validation and use
-(ROC, KS, calibration, PSI, fair lending, the approval policy, a decline explained), and limits and record. It
+(ROC, KS, calibration, PSI, fair lending, the approval policy, a decline explained), and limits and record (the
+limitations, a decision log giving the alternative, the evidence and the trade-off behind each of 12 modelling
+choices, and the results check). It
 asserts that its step-by-step build equals the tested pipeline and that every figure equals `outputs/results.json`.
 
 ## What drives the score
