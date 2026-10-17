@@ -10,6 +10,10 @@ every bin's points moving in one direction, and 600 points calibrated to mean 20
 [![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)](#reproduce)
 [![tests](https://github.com/alvenyuka/Credit-Risk-Scorecard/actions/workflows/ci.yml/badge.svg)](https://github.com/alvenyuka/Credit-Risk-Scorecard/actions/workflows/ci.yml)
 
+**Live case study:** [credit-risk-alven.vercel.app](https://credit-risk-alven.vercel.app), an approval-policy explorer,
+decile chart, calibration table, reason-code example and points table, all rendered from the executed outputs in
+`outputs/` (see `demo/README.md`).
+
 ![Default rate by score decile, falling from 26.4% in the lowest band to 1.3% in the highest](figures/default_rate_by_band.png)
 
 ## Model summary
@@ -184,8 +188,9 @@ outputs/business_impact.json  approval-policy table with its assumptions
 outputs/scorecard_points.json the points for every bin of every kept characteristic
 outputs/challengers.json      the champion-challenger comparison behind coarse classing, and the LightGBM benchmark
 figures/                      charts drawn from the same model
-figs/                         charts drawn by the notebook (plus four from an earlier pipeline, kept for its demo page)
-output/                       demo data from that earlier pipeline
+figs/                         charts drawn by the notebook (plus four left over from an earlier pipeline's demo page)
+output/                       demo data left over from that earlier pipeline; the live page now reads outputs/
+demo/                         the live case-study page and how to redeploy it
 outputs/notebook_run.json     date, runtime, memory and library versions of the stored notebook run
 Credit_Risk_Scorecard.ipynb   the analysis in four parts, executed end to end; its charts are in figs/
 build_notebook.py             generates the notebook (edit this, not the .ipynb)

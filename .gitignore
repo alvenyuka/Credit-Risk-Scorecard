@@ -15,3 +15,7 @@ src/_cache_relational_features.json
 outputs_run.log
 
 .pytest_cache/
+
+# Vercel link for the live case-study page
+demo/.vercel/
+demo/.env*.local

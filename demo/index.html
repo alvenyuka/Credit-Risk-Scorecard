@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Credit Risk Scorecard | Alven Yuka</title>
+<meta name="description" content="A points-based credit scorecard on 307,511 Home Credit applicants: AUC 0.754, KS 0.381, a reason for every decline, and a 47% cut in credit losses at 80% approval. Every figure on this page is read from the repository's executed outputs.">
+<meta name="theme-color" content="#04040a">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2304040a'/%3E%3Ccircle cx='32' cy='32' r='12' fill='%23e8ff47'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600&f[]=cabinet-grotesk@400,500,700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{--bg:#04040a;--bg-2:#080812;--card:#0b0b17;--fg:#f0f0f8;--fg-2:#c4c4d8;--muted:#9898b8;--faint:#62628a;--border:rgba(255,255,255,.08);--border-strong:rgba(255,255,255,.16);--lime:#e8ff47;--lime-dim:rgba(232,255,71,.14);--on-lime:#04040a;--orange:#ff6b35;--font:"Cabinet Grotesk",system-ui,sans-serif;--display:"Clash Display","Cabinet Grotesk",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,Consolas,monospace;color-scheme:dark}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:4.5rem}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:1.0625rem;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit;text-decoration-color:var(--border-strong);text-underline-offset:.16em}
+a:hover{text-decoration-color:currentColor}
+:focus-visible{outline:2px solid var(--lime);outline-offset:3px;border-radius:4px}
+::selection{background:var(--lime);color:var(--on-lime)}
+h1,h2,h3{margin:0;font-weight:500;line-height:1.15;text-wrap:balance}
+p{margin:0}
+ul,ol{margin:0;padding:0;list-style:none}
+.display{font-family:var(--display);font-weight:500;letter-spacing:-.02em}
+.mono{font-family:var(--mono);font-weight:400}
+.wrap{width:min(1180px,100% - 2rem);margin-inline:auto}
+.top{position:sticky;top:0;z-index:40;background:rgba(4,4,10,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--border)}
+.top-row{display:flex;align-items:center;gap:1.5rem;height:4rem}
+.brand{display:inline-flex;align-items:center;gap:.4rem;font-family:var(--display);font-weight:600;font-size:1.125rem;text-decoration:none}
+.brand .dot{width:.4rem;height:.4rem;border-radius:50%;background:var(--lime)}
+.nav{display:flex;gap:1.5rem;margin-inline:auto;font-size:.9375rem;color:var(--muted)}
+.nav a{text-decoration:none}.nav a:hover{color:var(--fg)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;padding:.85rem 1.5rem;border-radius:999px;font-weight:500;font-size:1rem;text-decoration:none;border:1px solid transparent;transition:background-color .15s,border-color .15s,color .15s}
+.btn-sm{padding:.55rem 1.1rem;font-size:.9rem}
+.btn-lime{background:var(--lime);color:var(--on-lime);font-weight:600}.btn-lime:hover{background:#f1ff7a}
+.btn-outline{border-color:var(--border-strong);color:var(--fg)}.btn-outline:hover{border-color:var(--fg);background:rgba(255,255,255,.04)}
+.nav-cta{margin-left:auto;border-color:var(--orange);color:var(--orange)}.nav-cta:hover{background:rgba(255,107,53,.1);border-color:var(--orange);color:var(--orange)}
+.pill{display:inline-flex;align-items:center;gap:.55rem;padding:.4rem .9rem;border-radius:999px;border:1px solid var(--border-strong);background:rgba(255,255,255,.03);font-family:var(--mono);font-size:.75rem;color:var(--fg-2)}
+.pulse{width:.45rem;height:.45rem;border-radius:50%;background:var(--lime);animation:pulse 2s ease-out infinite;flex:none}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(232,255,71,.55)}70%{box-shadow:0 0 0 8px rgba(232,255,71,0)}100%{box-shadow:0 0 0 0 rgba(232,255,71,0)}}
+.hero{position:relative;overflow:hidden}
+.grid-bg{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);background-size:64px 64px;-webkit-mask-image:radial-gradient(ellipse 85% 80% at 50% 40%,#000 30%,transparent 100%);mask-image:radial-gradient(ellipse 85% 80% at 50% 40%,#000 30%,transparent 100%)}
+.hero::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 60% 50% at 75% 30%,rgba(232,255,71,.07),transparent 70%)}
+.hero-inner{position:relative;padding-block:clamp(3.5rem,8vw,6rem) clamp(3rem,6vw,4.5rem)}
+.hero .pill{margin-bottom:1.75rem}
+.hero h1{font-size:clamp(2.4rem,1rem+5.2vw,5.4rem);line-height:.98;letter-spacing:-.03em;max-width:16ch}
+.lede{margin-top:1.75rem;color:var(--fg-2);font-size:clamp(1.0625rem,.9rem+.5vw,1.2rem);max-width:62ch}
+.actions{display:flex;flex-wrap:wrap;gap:.75rem;margin-top:2rem}
+.stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1rem;margin-top:3rem;padding-top:2rem;border-top:1px solid var(--border)}
+.stat .v{font-family:var(--display);font-size:clamp(1.6rem,1rem+1.6vw,2.4rem);color:var(--lime);line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.stat .k{display:block;margin-top:.5rem;font-family:var(--mono);font-size:.72rem;color:var(--muted)}
+.section{padding-block:clamp(3.5rem,7vw,6rem)}
+.section+.section{border-top:1px solid var(--border)}
+.section-head{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:1.25rem 4rem;align-items:end;margin-bottom:clamp(2rem,4vw,3rem)}
+.section-head .pill{margin-bottom:1.1rem}
+.section-head h2{font-size:clamp(1.9rem,1.2rem+2.6vw,3.4rem);letter-spacing:-.03em;line-height:1}
+.section-head>p{color:var(--muted);max-width:56ch}
+.card{background:var(--card);border:1px solid var(--border);border-radius:1rem;padding:clamp(1.25rem,3vw,2rem);box-shadow:0 12px 24px 0 rgba(255,255,255,.025) inset,0 .5px .5px 0 rgba(255,255,255,.06) inset,0 48px 72px -12px rgba(0,0,0,.24)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.25rem}
+.explorer{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:2rem;align-items:start}
+.slider-row{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:1rem;margin-bottom:.75rem}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tablewrap table{min-width:520px}
+.explorer>div,.grid2>div{min-width:0}
+.slider-row .big{font-family:var(--display);font-size:3rem;color:var(--lime);line-height:1;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--lime);margin:.5rem 0 1rem}
+.kv{display:grid;grid-template-columns:1fr auto;gap:.5rem 1.5rem;font-size:.9875rem}
+.kv dt{color:var(--muted)}.kv dd{margin:0;font-variant-numeric:tabular-nums;text-align:right;color:var(--fg)}
+.kv dd.lime{color:var(--lime);font-weight:600}
+.note{margin-top:1rem;font-size:.85rem;color:var(--faint);line-height:1.5}
+.chart{width:100%;height:auto;display:block}
+.chart text{font-family:var(--mono);font-size:11px;fill:var(--muted)}
+.chart .axis{stroke:var(--border-strong)}
+table{width:100%;border-collapse:collapse;font-size:.9rem;font-variant-numeric:tabular-nums}
+th,td{padding:.6rem .5rem;border-bottom:1px solid var(--border);text-align:right;vertical-align:top}
+th:first-child,td:first-child{text-align:left}
+th{font-family:var(--mono);font-weight:400;font-size:.72rem;color:var(--faint);text-transform:lowercase}
+tr.hl td{color:var(--lime);font-weight:600}
+.reasons{display:grid;gap:.75rem;margin-top:1.25rem}
+.reason{display:grid;grid-template-columns:minmax(0,1fr) 5.5rem;gap:1rem;align-items:center}
+.reason .bar{height:.5rem;border-radius:999px;background:var(--border);overflow:hidden}
+.reason .bar i{display:block;height:100%;background:var(--lime)}
+.reason .lab{font-size:.9rem;color:var(--fg-2);margin-bottom:.35rem}
+.reason .pts{font-family:var(--mono);font-size:.8rem;color:var(--lime);text-align:right}
+details{border:1px solid var(--border);border-radius:.75rem;padding:0 1rem;background:var(--card)}
+details+details{margin-top:.75rem}
+summary{cursor:pointer;padding:.9rem 0;display:flex;justify-content:space-between;gap:1rem;font-weight:500}
+summary .iv{font-family:var(--mono);font-size:.78rem;color:var(--muted)}
+details table{margin-bottom:1rem}
+.limits li{position:relative;padding-left:1.2rem;color:var(--fg-2);font-size:.9875rem}
+.limits li+li{margin-top:.6rem}
+.limits li::before{content:"";position:absolute;left:0;top:.72em;width:.4rem;height:.4rem;border-radius:50%;background:var(--lime)}
+.foot{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;padding:1.75rem 0 2.5rem;color:var(--faint);font-size:.75rem;border-top:1px solid var(--border)}
+@media (max-width:900px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.section-head,.grid2,.explorer{grid-template-columns:1fr}.nav{display:none}}
+@media (max-width:640px){.btn{width:100%}.nav-cta{width:auto}.slider-row .big{font-size:2.4rem}}
+@media (prefers-reduced-motion:reduce){.pulse{animation:none}html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap top-row">
+  <a class="brand" href="https://alven-yuka.vercel.app">Alven Yuka<span class="dot" aria-hidden="true"></span></a>
+  <nav class="nav" aria-label="Sections"><a href="#policy">Policy</a><a href="#scores">Scores</a><a href="#reasons">Reasons</a><a href="#points">Points</a><a href="#fairness">Fairness</a><a href="#limits">Limits</a></nav>
+  <a class="btn btn-outline btn-sm nav-cta" href="https://github.com/alvenyuka/Credit-Risk-Scorecard" target="_blank" rel="noopener">Repository</a>
+</div></header>
+
+<main>
+<section class="hero"><div class="grid-bg" aria-hidden="true"></div><div class="wrap hero-inner">
+  <p class="pill"><span class="pulse" aria-hidden="true"></span>Case study · figures read from executed outputs at commit <span id="commit"></span></p>
+  <h1 class="display">A scorecard that gives every decline a reason.</h1>
+  <p class="lede">A points-based credit scorecard built on 307,511 Home Credit applications across eight relational tables: Weight of Evidence bins coarse-classed so every bin's points move one way, a logistic regression written from first principles and checked against scikit-learn, and 600 points calibrated to 20:1 good-to-bad odds. Tested once on 61,503 applicants it had never seen.</p>
+  <div class="actions"><a class="btn btn-lime" href="#policy">Explore the approval policy</a><a class="btn btn-outline" href="https://github.com/alvenyuka/Credit-Risk-Scorecard#reproduce" target="_blank" rel="noopener">Reproduce it</a></div>
+  <div class="stats" id="stats"></div>
+</div></section>
+
+<section class="section wrap" id="policy">
+  <div class="section-head"><div><p class="pill">Approval policy</p><h2 class="display">Choose the cut-off, see the cost.</h2></div>
+  <p>Move the approval rate and the page recomputes the cut-off score, the default rate among approved loans, the credit loss and how many good borrowers are turned away. Every row comes from the 61,503-applicant holdout, with the figures at 90%, 80% and 70% matching the repository's business-impact file to the digit.</p></div>
+  <div class="card explorer">
+    <div>
+      <div class="slider-row"><span class="mono" style="color:var(--muted);font-size:.75rem">approve the top</span><span class="big" id="arBig">80%</span></div>
+      <input type="range" id="ar" min="50" max="100" value="80" step="1" aria-label="Approval rate">
+      <dl class="kv">
+        <dt>Cut-off score</dt><dd id="cut"></dd>
+        <dt>Applicants approved</dt><dd id="approved"></dd>
+        <dt>Default rate among approved</dt><dd id="dr"></dd>
+        <dt>Credit approved</dt><dd id="credit"></dd>
+        <dt>Expected credit loss</dt><dd id="loss"></dd>
+        <dt>Loss avoided vs approving everyone</dt><dd class="lime" id="avoid"></dd>
+        <dt>Good borrowers declined</dt><dd id="gdecl"></dd>
+      </dl>
+      <p class="note">Credit loss is the credit amount of each approved loan that defaulted, times a 45% loss given default (the Basel foundation-IRB value for senior unsecured lending). Home Credit does not state its currency, so amounts are in the dataset's own units, shown in billions.</p>
+    </div>
+    <div>
+      <svg class="chart" id="policyChart" viewBox="0 0 560 300" role="img" aria-label="Loss avoided and good borrowers declined against approval rate"></svg>
+      <div class="tablewrap"><table style="margin-top:1rem"><thead><tr><th>policy</th><th>cut-off</th><th>default rate</th><th>credit loss</th><th>loss avoided</th><th>good declined</th></tr></thead><tbody id="policyTable"></tbody></table></div>
+    </div>
+  </div>
+</section>
+
+<section class="section wrap" id="scores">
+  <div class="section-head"><div><p class="pill">Scores</p><h2 class="display">The score ranks risk, and the odds it states are the odds observed.</h2></div>
+  <p>Holdout applicants sorted into ten equal bands by score. Default rates fall band by band, and the probability the model states for each band sits within half a percentage point of what happened.</p></div>
+  <div class="grid2">
+    <div class="card"><h3 class="display" style="font-size:1.2rem">Default rate by score decile</h3><svg class="chart" id="decileChart" viewBox="0 0 560 300" role="img" aria-label="Default rate by score decile" style="margin-top:1rem"></svg></div>
+    <div class="card"><h3 class="display" style="font-size:1.2rem">Calibration: stated against observed</h3><table style="margin-top:1rem"><thead><tr><th>decile</th><th>applicants</th><th>stated pd</th><th>observed</th><th>gap</th></tr></thead><tbody id="calTable"></tbody></table><p class="note" id="calNote"></p></div>
+  </div>
+</section>
+
+<section class="section wrap" id="reasons">
+  <div class="section-head"><div><p class="pill">Reason codes</p><h2 class="display">Every decline names what cost the points.</h2></div>
+  <p>Each characteristic contributes points. For a declined applicant, the reasons are the characteristics where the applicant's bin sits furthest below that characteristic's best bin. This is a real applicant from the holdout.</p></div>
+  <div class="card">
+    <div class="grid2" style="gap:2rem">
+      <div>
+        <dl class="kv" id="exampleKv"></dl>
+        <p class="note">Under the Equal Credit Opportunity Act and Regulation B a lender must state the principal reasons for an adverse action. The points gap gives that statement directly, without a separate explanation model.</p>
+      </div>
+      <div><p class="mono" style="font-size:.75rem;color:var(--muted)">points below the best bin</p><div class="reasons" id="reasonList"></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="section wrap" id="points">
+  <div class="section-head"><div><p class="pill">Scorecard</p><h2 class="display">The points table, as a lender would read it.</h2></div>
+  <p id="pointsIntro"></p></div>
+  <div id="pointsList"></div>
+</section>
+
+<section class="section wrap" id="fairness">
+  <div class="section-head"><div><p class="pill">Fairness and regulation</p><h2 class="display">What was left out on purpose.</h2></div>
+  <p>Sex and marital status are prohibited bases under ECOA and Regulation B, so they were removed before fitting. The repository measures what that exclusion cost rather than assuming it was free.</p></div>
+  <div class="grid2">
+    <div class="card"><h3 class="display" style="font-size:1.2rem">Prohibited bases excluded</h3><dl class="kv" style="margin-top:1rem" id="ablationKv"></dl><p class="note">The information value of each excluded characteristic is reported so the decision is auditable: both were weak predictors, and the AUC moves by about a thousandth.</p></div>
+    <div class="card"><h3 class="display" style="font-size:1.2rem">Age 62 and over</h3><dl class="kv" style="margin-top:1rem" id="regbKv"></dl><p class="note">Regulation B lets age be used only if applicants aged 62 or over are not scored less favourably. Age did not survive feature selection, so the check passes by construction and the test asserts it.</p></div>
+  </div>
+</section>
+
+<section class="section wrap" id="limits">
+  <div class="section-head"><div><p class="pill">Limits</p><h2 class="display">What this result does not show.</h2></div>
+  <p>Stated so a reader can weigh the figures rather than take them on trust.</p></div>
+  <div class="card"><ul class="limits">
+    <li>The holdout is a random, stratified 20% of applicants, not a later period, so the figures measure discrimination within one vintage, not stability through a downturn. The population-stability index between training and holdout scores is reported as a sanity check only.</li>
+    <li>Credit loss uses an assumed 45% loss given default and the application's credit amount as exposure. A lender's own recovery data would change the money figures, though not the ranking.</li>
+    <li>Home Credit is one lender in one market, and the dataset's currency is not stated. The policy table is a method demonstration, not a Kenyan pricing exercise.</li>
+    <li id="lgbmLimit"></li>
+    <li>The three external bureau scores carry most of the signal. Where a lender lacks bureau coverage, as many Kenyan SACCOs do, the card would need rebuilding on the remaining characteristics and its AUC would fall.</li>
+  </ul></div>
+</section>
+</main>
+
+<footer class="foot wrap mono"><span>Alven Yuka · <a href="https://alven-yuka.vercel.app">alven-yuka.vercel.app</a></span><span id="footNote"></span></footer>
+
+<script id="data" type="application/json">{"generated_at":"2026-10-06T19:01:46+00:00","commit":"75ef602","auc":0.7539670402143243,"auc_ci":[0.7473056819729438,0.7613108275118586],"ks":0.38145422927060574,"gini":0.5079340804286485,"corr_sklearn":0.9999987587156998,"n_val":61503,"bad_rate":0.08072776937710356,"n_cand":62,"n_kept":32,"psi":0.00019570694392003542,"cal_gap":0.003968401290408402,"score_min":389.2102731411425,"score_max":787.1065944051417,"base_points":567.809763350034,"factor":57.70780163555854,"deciles":[{"decile":0,"n":6151,"score_min":389.2102731411,"score_max":514.2486996014,"default_rate":0.2640221102},{"decile":1,"n":6150,"score_min":514.2493074411,"score_max":540.5554094671,"default_rate":0.1504065041},{"decile":2,"n":6150,"score_min":540.5578811008,"score_max":560.264135587,"default_rate":0.1047154472},{"decile":3,"n":6150,"score_min":560.2656710824,"score_max":577.1046031388,"default_rate":0.082601626},{"decile":4,"n":6151,"score_min":577.1077083342,"score_max":592.3419523257,"default_rate":0.0593399447},{"decile":5,"n":6150,"score_min":592.3419651409,"score_max":606.9776803936,"default_rate":0.0494308943},{"decile":6,"n":6150,"score_min":606.9778026029,"score_max":622.4819972861,"default_rate":0.033495935},{"decile":7,"n":6150,"score_min":622.4847417352,"score_max":639.466485876,"default_rate":0.0300813008},{"decile":8,"n":6150,"score_min":639.4687827268,"score_max":661.6446827585,"default_rate":0.0201626016},{"decile":9,"n":6151,"score_min":661.6455332106,"score_max":787.1065944051,"default_rate":0.0130060153}],"calibration":[{"decile":0,"n":6151,"mean_predicted_pd":0.0120493342,"observed_default_rate":0.0130060153,"gap":-0.000956681},{"decile":1,"n":6150,"mean_predicted_pd":0.0207709888,"observed_default_rate":0.0201626016,"gap":0.0006083872},{"decile":2,"n":6150,"mean_predicted_pd":0.028671608,"observed_default_rate":0.0300813008,"gap":-0.0014096928},{"decile":3,"n":6150,"mean_predicted_pd":0.0374643362,"observed_default_rate":0.033495935,"gap":0.0039684013},{"decile":4,"n":6151,"mean_predicted_pd":0.0480210414,"observed_default_rate":0.0494228581,"gap":-0.0014018167},{"decile":5,"n":6150,"mean_predicted_pd":0.0612148153,"observed_default_rate":0.0593495935,"gap":0.0018652218},{"decile":6,"n":6150,"mean_predicted_pd":0.079253314,"observed_default_rate":0.082601626,"gap":-0.003348312},{"decile":7,"n":6150,"mean_predicted_pd":0.1052315566,"observed_default_rate":0.1047154472,"gap":0.0005161095},{"decile":8,"n":6150,"mean_predicted_pd":0.1489279938,"observed_default_rate":0.1504065041,"gap":-0.0014785103},{"decile":9,"n":6151,"mean_predicted_pd":0.2604673031,"observed_default_rate":0.2640221102,"gap":-0.0035548071}],"example":{"holdout_row":156963,"outcome":"defaulted","score":530.1088939008008,"cut_off_score_at_80pct_approval":540.5578811007764,"reasons_points_below_best_bin":[{"feature":"EXT_SOURCE_3","points":58.093135946713396},{"feature":"NAME_EDUCATION_TYPE","points":43.11357412790526},{"feature":"EXT_SOURCE_MEAN","points":27.459641523462835}]},"ablation":{"val_auc_sklearn_final_features":0.753962622862496,"val_auc_sklearn_with_prohibited_bases":0.7552722572457662,"prohibited_bases_iv":{"CODE_GENDER":0.038433958519654386,"NAME_FAMILY_STATUS":0.02334213450906123}},"reg_b":{"age_feature_in_scorecard":false,"bins_covering_62_plus":{},"min_points_62_plus":null,"passed":true},"policy":[{"ar":50,"approved":30752,"cut":592.3,"dr":0.0292,"loss":0.266,"avoid":0.7871,"gdecl":0.472,"credit":20.26},{"ar":51,"approved":31367,"cut":590.9,"dr":0.0299,"loss":0.277,"avoid":0.7784,"gdecl":0.4618,"credit":20.62},{"ar":52,"approved":31982,"cut":589.4,"dr":0.0304,"loss":0.285,"avoid":0.7717,"gdecl":0.4515,"credit":20.98},{"ar":53,"approved":32597,"cut":587.9,"dr":0.0308,"loss":0.294,"avoid":0.7643,"gdecl":0.4412,"credit":21.33},{"ar":54,"approved":33212,"cut":586.4,"dr":0.0311,"loss":0.302,"avoid":0.7579,"gdecl":0.4309,"credit":21.69},{"ar":55,"approved":33827,"cut":585.0,"dr":0.0317,"loss":0.311,"avoid":0.7512,"gdecl":0.4206,"credit":22.07},{"ar":56,"approved":34442,"cut":583.4,"dr":0.0322,"loss":0.322,"avoid":0.7419,"gdecl":0.4104,"credit":22.44},{"ar":57,"approved":35057,"cut":581.8,"dr":0.0328,"loss":0.333,"avoid":0.7332,"gdecl":0.4003,"credit":22.76},{"ar":58,"approved":35672,"cut":580.2,"dr":0.0331,"loss":0.342,"avoid":0.7264,"gdecl":0.39,"credit":23.1},{"ar":59,"approved":36287,"cut":578.7,"dr":0.0339,"loss":0.353,"avoid":0.7172,"gdecl":0.3799,"credit":23.44},{"ar":60,"approved":36902,"cut":577.1,"dr":0.0343,"loss":0.361,"avoid":0.7106,"gdecl":0.3697,"credit":23.79},{"ar":61,"approved":37517,"cut":575.5,"dr":0.0348,"loss":0.372,"avoid":0.7024,"gdecl":0.3595,"credit":24.15},{"ar":62,"approved":38132,"cut":573.9,"dr":0.0353,"loss":0.382,"avoid":0.6944,"gdecl":0.3494,"credit":24.49},{"ar":63,"approved":38747,"cut":572.2,"dr":0.0361,"loss":0.396,"avoid":0.6828,"gdecl":0.3394,"credit":24.86},{"ar":64,"approved":39362,"cut":570.7,"dr":0.0365,"loss":0.406,"avoid":0.6748,"gdecl":0.3292,"credit":25.22},{"ar":65,"approved":39977,"cut":568.9,"dr":0.0374,"loss":0.422,"avoid":0.662,"gdecl":0.3194,"credit":25.56},{"ar":66,"approved":40592,"cut":567.2,"dr":0.0382,"loss":0.437,"avoid":0.6498,"gdecl":0.3094,"credit":25.92},{"ar":67,"approved":41207,"cut":565.5,"dr":0.0387,"loss":0.449,"avoid":0.6404,"gdecl":0.2994,"credit":26.27},{"ar":68,"approved":41822,"cut":563.7,"dr":0.0395,"loss":0.464,"avoid":0.6282,"gdecl":0.2895,"credit":26.61},{"ar":69,"approved":42437,"cut":562.0,"dr":0.0403,"loss":0.48,"avoid":0.6159,"gdecl":0.2797,"credit":26.96},{"ar":70,"approved":43052,"cut":560.3,"dr":0.0412,"loss":0.497,"avoid":0.6024,"gdecl":0.2699,"credit":27.3},{"ar":71,"approved":43667,"cut":558.5,"dr":0.0419,"loss":0.512,"avoid":0.5898,"gdecl":0.26,"credit":27.63},{"ar":72,"approved":44282,"cut":556.7,"dr":0.0427,"loss":0.529,"avoid":0.5767,"gdecl":0.2503,"credit":27.96},{"ar":73,"approved":44897,"cut":554.8,"dr":0.0435,"loss":0.546,"avoid":0.563,"gdecl":0.2405,"credit":28.31},{"ar":74,"approved":45512,"cut":553.0,"dr":0.0443,"loss":0.562,"avoid":0.5504,"gdecl":0.2306,"credit":28.65},{"ar":75,"approved":46127,"cut":551.2,"dr":0.0449,"loss":0.577,"avoid":0.5383,"gdecl":0.2208,"credit":28.98},{"ar":76,"approved":46742,"cut":549.2,"dr":0.0456,"loss":0.592,"avoid":0.5259,"gdecl":0.211,"credit":29.3},{"ar":77,"approved":47357,"cut":547.1,"dr":0.0465,"loss":0.609,"avoid":0.5126,"gdecl":0.2013,"credit":29.63},{"ar":78,"approved":47972,"cut":545.0,"dr":0.0474,"loss":0.628,"avoid":0.4968,"gdecl":0.1917,"credit":29.97},{"ar":79,"approved":48587,"cut":542.8,"dr":0.0483,"loss":0.648,"avoid":0.4808,"gdecl":0.1822,"credit":30.31},{"ar":80,"approved":49202,"cut":540.6,"dr":0.0491,"loss":0.665,"avoid":0.4676,"gdecl":0.1725,"credit":30.64},{"ar":81,"approved":49817,"cut":538.2,"dr":0.05,"loss":0.686,"avoid":0.451,"gdecl":0.163,"credit":30.95},{"ar":82,"approved":50432,"cut":535.9,"dr":0.0513,"loss":0.709,"avoid":0.4325,"gdecl":0.1537,"credit":31.26},{"ar":83,"approved":51047,"cut":533.5,"dr":0.0521,"loss":0.728,"avoid":0.4174,"gdecl":0.1442,"credit":31.61},{"ar":84,"approved":51663,"cut":530.9,"dr":0.0534,"loss":0.753,"avoid":0.3974,"gdecl":0.135,"credit":31.92},{"ar":85,"approved":52278,"cut":528.4,"dr":0.0546,"loss":0.775,"avoid":0.3794,"gdecl":0.1258,"credit":32.24},{"ar":86,"approved":52893,"cut":525.7,"dr":0.0555,"loss":0.792,"avoid":0.366,"gdecl":0.1164,"credit":32.55},{"ar":87,"approved":53508,"cut":523.0,"dr":0.0566,"loss":0.813,"avoid":0.349,"gdecl":0.1071,"credit":32.85},{"ar":88,"approved":54123,"cut":520.1,"dr":0.0577,"loss":0.836,"avoid":0.3309,"gdecl":0.0979,"credit":33.17},{"ar":89,"approved":54738,"cut":517.3,"dr":0.059,"loss":0.865,"avoid":0.3073,"gdecl":0.0889,"credit":33.5},{"ar":90,"approved":55353,"cut":514.2,"dr":0.0604,"loss":0.891,"avoid":0.2865,"gdecl":0.0801,"credit":33.82},{"ar":91,"approved":55968,"cut":510.9,"dr":0.0616,"loss":0.915,"avoid":0.2671,"gdecl":0.0711,"credit":34.12},{"ar":92,"approved":56583,"cut":507.1,"dr":0.0629,"loss":0.943,"avoid":0.2451,"gdecl":0.0621,"credit":34.43},{"ar":93,"approved":57198,"cut":503.1,"dr":0.0643,"loss":0.97,"avoid":0.2233,"gdecl":0.0534,"credit":34.73},{"ar":94,"approved":57813,"cut":499.0,"dr":0.0664,"loss":1.007,"avoid":0.1939,"gdecl":0.0454,"credit":35.04},{"ar":95,"approved":58428,"cut":494.1,"dr":0.0682,"loss":1.04,"avoid":0.1674,"gdecl":0.0371,"credit":35.34},{"ar":96,"approved":59043,"cut":488.4,"dr":0.0701,"loss":1.075,"avoid":0.1393,"gdecl":0.0289,"credit":35.64},{"ar":97,"approved":59658,"cut":481.3,"dr":0.0722,"loss":1.114,"avoid":0.1083,"gdecl":0.021,"credit":35.94},{"ar":98,"approved":60273,"cut":472.5,"dr":0.0744,"loss":1.151,"avoid":0.0786,"gdecl":0.0133,"credit":36.21},{"ar":99,"approved":60888,"cut":459.3,"dr":0.0771,"loss":1.194,"avoid":0.0437,"gdecl":0.0061,"credit":36.5},{"ar":100,"approved":61503,"cut":389.2,"dr":0.0807,"loss":1.249,"avoid":0.0,"gdecl":0.0,"credit":36.77}],"points":[{"feature":"EXT_SOURCE_MEAN","type":"numeric","iv":0.609,"bins":[{"bin":"(-inf, 0.304]","n":24587,"points":-19.2},{"bin":"(0.304, 0.384]","n":24587,"points":-10.3},{"bin":"(0.384, 0.439]","n":24587,"points":-4.6},{"bin":"(0.439, 0.484]","n":24587,"points":-0.1},{"bin":"(0.484, 0.524]","n":24587,"points":3.4},{"bin":"(0.524, 0.564]","n":24586,"points":6.6},{"bin":"(0.564, 0.602]","n":24587,"points":11.4},{"bin":"(0.602, 0.644]","n":24587,"points":13.2},{"bin":"(0.644, 0.693]","n":24587,"points":16.7},{"bin":"(0.693, inf]","n":24587,"points":22.9},{"bin":"Missing","n":139,"points":-1.7}]},{"feature":"EXT_SOURCE_3","type":"numeric","iv":0.33,"bins":[{"bin":"(-inf, 0.228]","n":19723,"points":-30.2},{"bin":"(0.228, 0.33]","n":19757,"points":-14.9},{"bin":"(0.33, 0.408]","n":20001,"points":-6.1},{"bin":"(0.408, 0.476]","n":19842,"points":0.5},{"bin":"(0.476, 0.535]","n":19513,"points":8.4},{"bin":"(0.535, 0.59]","n":19506,"points":12.8},{"bin":"(0.59, 0.643]","n":20444,"points":15.9},{"bin":"(0.643, 0.694]","n":19808,"points":20.9},{"bin":"(0.694, 0.749]","n":18902,"points":25.9},{"bin":"(0.749, inf]","n":19707,"points":27.8},{"bin":"Missing","n":48805,"points":-4.4}]},{"feature":"EXT_SOURCE_2","type":"numeric","iv":0.303,"bins":[{"bin":"(-inf, 0.215]","n":24548,"points":-25.8},{"bin":"(0.215, 0.34]","n":24548,"points":-12.4},{"bin":"(0.34, 0.44]","n":24547,"points":-6.1},{"bin":"(0.44, 0.512]","n":24549,"points":-1.2},{"bin":"(0.512, 0.566]","n":24551,"points":2.3},{"bin":"(0.566, 0.608]","n":24543,"points":6.2},{"bin":"(0.608, 0.646]","n":24548,"points":9.5},{"bin":"(0.646, 0.682]","n":24550,"points":14.0},{"bin":"(0.682, 0.722]","n":24547,"points":19.1},{"bin":"(0.722, inf]","n":24546,"points":29.2},{"bin":"Missing","n":531,"points":1.0}]},{"feature":"EXT_SOURCE_1","type":"numeric","iv":0.151,"bins":[{"bin":"(-inf, 0.212]","n":10742,"points":-19.1},{"bin":"(0.212, 0.296]","n":10741,"points":-8.8},{"bin":"(0.296, 0.368]","n":10741,"points":-2.9},{"bin":"(0.368, 0.437]","n":10741,"points":-1.1},{"bin":"(0.437, 0.505]","n":10742,"points":4.0},{"bin":"(0.505, 0.573]","n":10741,"points":7.1},{"bin":"(0.573, 0.64]","n":10741,"points":10.4},{"bin":"(0.64, 0.71]","n":10741,"points":14.4},{"bin":"(0.71, 0.787]","n":10741,"points":19.8},{"bin":"(0.787, inf]","n":10742,"points":26.1},{"bin":"Missing","n":138595,"points":-1.3}]},{"feature":"BUREAU_DAYS_CREDIT_MEAN","type":"numeric","iv":0.12,"bins":[{"bin":"(-inf, -1530.182]","n":42154,"points":2.7},{"bin":"(-1530.182, -1349.2]","n":21078,"points":2.3},{"bin":"(-1349.2, -1194.857]","n":21076,"points":1.8},{"bin":"(-1194.857, -1050.375]","n":21075,"points":1.2},{"bin":"(-1050.375, -902.732]","n":21075,"points":0.7},{"bin":"(-902.732, -748.0]","n":21087,"points":0.0},{"bin":"(-748.0, -573.5]","n":21080,"points":-1.0},{"bin":"(-573.5, -369.333]","n":21063,"points":-1.6},{"bin":"(-369.333, inf]","n":21076,"points":-3.4},{"bin":"Missing","n":35244,"points":-1.4}]},{"feature":"EMPLOYED_YEARS","type":"numeric","iv":0.111,"bins":[{"bin":"(-inf, 1.687]","n":40425,"points":-7.3},{"bin":"(1.687, 2.513]","n":20179,"points":-6.5},{"bin":"(2.513, 3.42]","n":20155,"points":-5.2},{"bin":"(3.42, 4.512]","n":20216,"points":-3.4},{"bin":"(4.512, 5.911]","n":20170,"points":-0.9},{"bin":"(5.911, 7.644]","n":20174,"points":1.3},{"bin":"(7.644, 10.067]","n":20194,"points":3.1},{"bin":"(10.067, 14.617]","n":20176,"points":6.7},{"bin":"(14.617, inf]","n":20176,"points":12.2},{"bin":"Missing","n":44143,"points":8.5}]},{"feature":"BUREAU_ACTIVE_SHARE","type":"numeric","iv":0.088,"bins":[{"bin":"(-inf, 0.2]","n":58364,"points":5.4},{"bin":"(0.2, 0.25]","n":15068,"points":4.6},{"bin":"(0.25, 0.333]","n":27855,"points":3.2},{"bin":"(0.333, 0.375]","n":5315,"points":0.6},{"bin":"(0.375, 0.5]","n":45713,"points":0.0},{"bin":"(0.5, 0.714]","n":23849,"points":-3.3},{"bin":"(0.714, inf]","n":34600,"points":-4.8},{"bin":"Missing","n":35244,"points":-3.2}]},{"feature":"OCCUPATION_TYPE","type":"categorical","iv":0.083,"bins":[{"bin":"Accountants","n":7882,"points":9.6},{"bin":"Cleaning staff","n":3741,"points":-3.0},{"bin":"Cooking staff","n":4767,"points":-4.7},{"bin":"Core staff","n":22093,"points":4.1},{"bin":"Drivers","n":14944,"points":-6.0},{"bin":"HR staff","n":443,"points":2.3},{"bin":"High skill tech staff","n":9093,"points":4.4},{"bin":"IT staff","n":424,"points":4.5},{"bin":"Laborers","n":44259,"points":-4.7},{"bin":"Low-skill Laborers","n":1696,"points":-15.0},{"bin":"Managers","n":17096,"points":4.5},{"bin":"Medicine staff","n":6871,"points":2.5},{"bin":"Missing","n":76940,"points":3.8},{"bin":"Private service staff","n":2094,"points":3.5},{"bin":"Realty agents","n":594,"points":-0.2},{"bin":"Sales staff","n":25606,"points":-3.1},{"bin":"Secretaries","n":1047,"points":2.0},{"bin":"Security staff","n":5372,"points":-5.0},{"bin":"Waiters/barmen staff","n":1046,"points":-6.4}]}],"n_features_total":32,"lgbm_holdout_auc":0.7807560775012978}</script>
+<script>
+(function(){
+  var D = JSON.parse(document.getElementById('data').textContent);
+  var $ = function(id){ return document.getElementById(id); };
+  var pct = function(x, d){ return (x*100).toFixed(d==null?1:d) + '%'; };
+  var num = function(x){ return x.toLocaleString('en-US'); };
+
+  $('commit').textContent = D.commit;
+  $('footNote').textContent = 'Figures read from outputs/results.json, business_impact.json, scorecard_points.json and val_scores.parquet at commit ' + D.commit + ', generated ' + D.generated_at.slice(0,10) + '. Nothing on this page is retyped.';
+
+  var p80 = D.policy.filter(function(r){ return r.ar === 80; })[0];
+  var stats = [
+    [D.auc.toFixed(3), 'AUC on ' + num(D.n_val) + ' held-out applicants (95% CI ' + D.auc_ci[0].toFixed(3) + ' to ' + D.auc_ci[1].toFixed(3) + ')'],
+    [D.ks.toFixed(3), 'Kolmogorov-Smirnov statistic'],
+    [pct(p80.avoid, 0), 'credit losses cut, approving the top 80%'],
+    [D.n_kept + ' of ' + D.n_cand, 'characteristics kept after IV, correlation and sign gates'],
+    [D.corr_sklearn.toFixed(6), 'correlation of from-scratch predictions with scikit-learn']
+  ];
+  $('stats').innerHTML = stats.map(function(s){ return '<div class="stat"><span class="v">' + s[0] + '</span><span class="k">' + s[1] + '</span></div>'; }).join('');
+
+  // Policy explorer
+  function showPolicy(ar){
+    var r = D.policy.filter(function(x){ return x.ar === ar; })[0];
+    $('arBig').textContent = ar + '%';
+    $('cut').textContent = ar === 100 ? 'none (approve all)' : r.cut.toFixed(0) + ' points';
+    $('approved').textContent = num(r.approved) + ' of ' + num(D.n_val);
+    $('dr').textContent = pct(r.dr);
+    $('credit').textContent = r.credit.toFixed(2) + ' bn';
+    $('loss').textContent = r.loss.toFixed(2) + ' bn';
+    $('avoid').textContent = pct(r.avoid);
+    $('gdecl').textContent = pct(r.gdecl);
+    drawPolicy(ar);
+  }
+  function drawPolicy(ar){
+    var W=560,H=300,L=48,R=16,T=18,B=40, iw=W-L-R, ih=H-T-B;
+    var x = function(a){ return L + (a-50)/50*iw; };
+    var y = function(v){ return T + ih - v*ih; };
+    var path = function(key){ return D.policy.map(function(r,i){ return (i?'L':'M') + x(r.ar).toFixed(1) + ' ' + y(r[key]).toFixed(1); }).join(' '); };
+    var s = '<line class="axis" x1="'+L+'" y1="'+(T+ih)+'" x2="'+(W-R)+'" y2="'+(T+ih)+'"/>';
+    [0,.25,.5,.75,1].forEach(function(v){ s += '<line x1="'+L+'" y1="'+y(v)+'" x2="'+(W-R)+'" y2="'+y(v)+'" stroke="rgba(255,255,255,.06)"/><text x="'+(L-8)+'" y="'+(y(v)+4)+'" text-anchor="end">'+Math.round(v*100)+'%</text>'; });
+    [50,60,70,80,90,100].forEach(function(a){ s += '<text x="'+x(a)+'" y="'+(H-14)+'" text-anchor="middle">'+a+'%</text>'; });
+    s += '<path d="'+path('avoid')+'" fill="none" stroke="#e8ff47" stroke-width="2.5"/>';
+    s += '<path d="'+path('gdecl')+'" fill="none" stroke="#ff6b35" stroke-width="2.5"/>';
+    var r = D.policy.filter(function(x){ return x.ar === ar; })[0];
+    s += '<line x1="'+x(ar)+'" y1="'+T+'" x2="'+x(ar)+'" y2="'+(T+ih)+'" stroke="rgba(255,255,255,.25)" stroke-dasharray="3 3"/>';
+    s += '<circle cx="'+x(ar)+'" cy="'+y(r.avoid)+'" r="5" fill="#e8ff47"/><circle cx="'+x(ar)+'" cy="'+y(r.gdecl)+'" r="5" fill="#ff6b35"/>';
+    s += '<text x="'+(L+6)+'" y="'+(T+12)+'" fill="#e8ff47" style="fill:#e8ff47">loss avoided</text><text x="'+(L+6)+'" y="'+(T+28)+'" style="fill:#ff6b35">good borrowers declined</text>';
+    s += '<text x="'+(W-R)+'" y="'+(H-2)+'" text-anchor="end">approval rate</text>';
+    $('policyChart').innerHTML = s;
+  }
+  $('ar').addEventListener('input', function(e){ showPolicy(parseInt(e.target.value,10)); });
+  showPolicy(80);
+  $('policyTable').innerHTML = [100,90,80,70].map(function(a){
+    var r = D.policy.filter(function(x){ return x.ar === a; })[0];
+    return '<tr' + (a===80?' class="hl"':'') + '><td>' + (a===100?'Approve everyone':'Approve top ' + a + '%') + '</td><td>' + (a===100?'n/a':r.cut.toFixed(0)) + '</td><td>' + pct(r.dr) + '</td><td>' + r.loss.toFixed(2) + ' bn</td><td>' + (a===100?'n/a':pct(r.avoid,0)) + '</td><td>' + pct(r.gdecl) + '</td></tr>';
+  }).join('');
+
+  // Decile chart
+  (function(){
+    var W=560,H=300,L=44,R=12,T=20,B=52, iw=W-L-R, ih=H-T-B, n=D.deciles.length, bw=iw/n*0.68;
+    var max = Math.max.apply(null, D.deciles.map(function(d){ return d.default_rate; }));
+    var s = '<line class="axis" x1="'+L+'" y1="'+(T+ih)+'" x2="'+(W-R)+'" y2="'+(T+ih)+'"/>';
+    D.deciles.forEach(function(d,i){
+      var h = d.default_rate/max*ih, cx = L + iw/n*(i+0.5);
+      s += '<rect x="'+(cx-bw/2)+'" y="'+(T+ih-h)+'" width="'+bw+'" height="'+h+'" rx="3" fill="'+(i<2?'#ff6b35':'#e8ff47')+'" opacity="'+(0.55+0.45*(i/(n-1)))+'"/>';
+      s += '<text x="'+cx+'" y="'+(T+ih-h-6)+'" text-anchor="middle" style="fill:#f0f0f8">'+(d.default_rate*100).toFixed(1)+'%</text>';
+      s += '<text x="'+cx+'" y="'+(T+ih+16)+'" text-anchor="middle">'+Math.round(d.score_min)+'</text>';
+      s += '<text x="'+cx+'" y="'+(T+ih+30)+'" text-anchor="middle" style="fill:#62628a">to '+Math.round(d.score_max)+'</text>';
+    });
+    s += '<text x="'+(W-R)+'" y="'+(H-4)+'" text-anchor="end">score band (lowest to highest)</text>';
+    $('decileChart').innerHTML = s;
+  })();
+
+  // Calibration
+  $('calTable').innerHTML = D.calibration.map(function(c){
+    return '<tr><td>' + (c.decile+1) + '</td><td>' + num(c.n) + '</td><td>' + pct(c.mean_predicted_pd) + '</td><td>' + pct(c.observed_default_rate) + '</td><td>' + (c.gap>=0?'+':'') + (c.gap*100).toFixed(2) + ' pts</td></tr>';
+  }).join('');
+  $('calNote').textContent = 'Largest gap in any decile: ' + (D.cal_gap*100).toFixed(2) + ' percentage points. Deciles here run from the lowest stated risk to the highest. Overall holdout default rate ' + pct(D.bad_rate) + '. Base points ' + D.base_points.toFixed(1) + ', ' + D.factor.toFixed(1) + ' points per doubling of the odds.';
+
+  // Example decline
+  var ex = D.example, gap = ex.cut_off_score_at_80pct_approval - ex.score;
+  $('exampleKv').innerHTML = '<dt>Holdout applicant</dt><dd>row ' + num(ex.holdout_row) + '</dd><dt>Score</dt><dd>' + ex.score.toFixed(0) + ' points</dd><dt>Cut-off at 80% approval</dt><dd>' + ex.cut_off_score_at_80pct_approval.toFixed(0) + ' points</dd><dt>Decision</dt><dd class="lime">Declined, ' + gap.toFixed(0) + ' points short</dd><dt>Actual outcome</dt><dd>' + ex.outcome + '</dd>';
+  var maxp = Math.max.apply(null, ex.reasons_points_below_best_bin.map(function(r){ return r.points; }));
+  var names = {EXT_SOURCE_3:'External bureau score 3', EXT_SOURCE_2:'External bureau score 2', EXT_SOURCE_1:'External bureau score 1', EXT_SOURCE_MEAN:'Mean of the external bureau scores', NAME_EDUCATION_TYPE:'Education level', BUREAU_DAYS_CREDIT_MEAN:'Average age of bureau credit lines', EMPLOYED_YEARS:'Years employed', BUREAU_ACTIVE_SHARE:'Share of bureau credit lines still active', OCCUPATION_TYPE:'Occupation'};
+  $('reasonList').innerHTML = ex.reasons_points_below_best_bin.map(function(r,i){
+    return '<div class="reason"><div><div class="lab">' + (i+1) + '. ' + (names[r.feature]||r.feature) + ' <span class="mono" style="color:var(--faint);font-size:.72rem">' + r.feature + '</span></div><div class="bar"><i style="width:' + (r.points/maxp*100).toFixed(0) + '%"></i></div></div><div class="pts">' + r.points.toFixed(1) + ' pts</div></div>';
+  }).join('');
+
+  // Points table
+  $('pointsIntro').textContent = 'The ' + D.n_features_total + ' characteristics that survived selection, ranked by information value. The ' + D.points.length + ' strongest are shown here with every bin and its points; the full table is outputs/scorecard_points.json in the repository. Points move in one direction within each characteristic, which is what coarse classing enforces.';
+  $('pointsList').innerHTML = D.points.map(function(f,i){
+    var rows = f.bins.map(function(b){ return '<tr><td>' + b.bin + '</td><td>' + num(b.n) + '</td><td' + (b.points<0?' style="color:#ff6b35"':'') + '>' + (b.points>0?'+':'') + b.points.toFixed(1) + '</td></tr>'; }).join('');
+    return '<details' + (i===0?' open':'') + '><summary><span>' + (names[f.feature]||f.feature) + ' <span class="mono" style="color:var(--faint);font-size:.72rem">' + f.feature + '</span></span><span class="iv">IV ' + f.iv.toFixed(3) + ' · ' + f.bins.length + ' bins</span></summary><table><thead><tr><th>bin</th><th>training applicants</th><th>points</th></tr></thead><tbody>' + rows + '</tbody></table></details>';
+  }).join('');
+
+  // Fairness
+  var ab = D.ablation;
+  $('ablationKv').innerHTML = '<dt>AUC, final characteristics</dt><dd>' + ab.val_auc_sklearn_final_features.toFixed(4) + '</dd><dt>AUC with sex and marital status added back</dt><dd>' + ab.val_auc_sklearn_with_prohibited_bases.toFixed(4) + '</dd><dt>Information value, sex</dt><dd>' + ab.prohibited_bases_iv.CODE_GENDER.toFixed(3) + '</dd><dt>Information value, marital status</dt><dd>' + ab.prohibited_bases_iv.NAME_FAMILY_STATUS.toFixed(3) + '</dd>';
+  var rb = D.reg_b;
+  $('regbKv').innerHTML = '<dt>Age in the final scorecard</dt><dd>' + (rb.age_feature_in_scorecard?'yes':'no') + '</dd><dt>Bins covering age 62 and over</dt><dd>' + Object.keys(rb.bins_covering_62_plus).length + '</dd><dt>Check</dt><dd class="lime">' + (rb.passed?'passed':'failed') + '</dd>';
+
+  $('lgbmLimit').textContent = 'A LightGBM benchmark on the same data reaches AUC ' + D.lgbm_holdout_auc.toFixed(3) + ' on the holdout against the scorecard’s ' + D.auc.toFixed(3) + '. That gap is the price of a card a lender can read, explain and defend; whether it is worth paying depends on the lender’s obligations.';
+})();
+</script>
+</body>
+</html>
