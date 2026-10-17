@@ -82,8 +82,8 @@ outputs/
   business_impact.json        approval-policy table with its assumptions
   scorecard_points.json       the points table: every bin of every kept feature
 figures/                      charts drawn from the current model
-output/                       demo_applicants.json, from an earlier pipeline (kept for the demo page)
-figs/                         four charts from an earlier pipeline (kept for the demo page)
+figs/                         the notebook's exploratory and diagnostic charts, written by build_notebook.py
+demo/                         the live case-study page; its embedded figures are generated from outputs/
 .github/workflows/ci.yml      runs the tests on every push
 ```
 
@@ -100,7 +100,7 @@ figs/                         four charts from an earlier pipeline (kept for the
 - **A points-based scorecard** whose 600-point anchor really means 20:1 good-to-bad odds (prior-corrected intercept), with reason codes by the points-below-maximum method.
 - **Acceptance checks on every run**: every coefficient negative on WoE inputs, no negative points for applicants aged 62 or over, no prohibited basis in the scorecard, and the notebook asserted equal to `outputs/results.json`.
 - **Application, bureau, and previous-application history** combined into a single feature set (62 candidate features, of which 8 are WoE-encoded as categorical; sex and marital status are excluded as prohibited bases).
-- **A live case-study page** ([credit-risk-alven.vercel.app](https://credit-risk-alven.vercel.app)) showing 20 held-out applicants scored by an earlier pipeline. It reads `output/demo_applicants.json`, which belongs to that earlier pipeline, not to the current model; this repo ships no model artefact, so nothing here scores an applicant live.
+- **A live case-study page** ([credit-risk-alven.vercel.app](https://credit-risk-alven.vercel.app)) built from this model's executed outputs: the headline metrics, the approval-policy table and the points table are embedded from `outputs/` (see `demo/README.md`), so the page and this repository state the same figures. The repo ships no model artefact, so nothing here scores an applicant live.
 
 ## Tech Stack
 

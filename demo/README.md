@@ -22,5 +22,5 @@ mkdir site && cp demo/index.html site/ && cd site
 npx vercel link --project credit-risk-alven --scope alven1 --yes && npx vercel deploy --prod --scope alven1
 ```
 
-This page replaced, on 2026-10-17, an earlier demo that showed figures from the previous pipeline
-(`output/demo_applicants.json` and the four extra charts in `figs/` are left over from it).
+This page replaced, on 2026-10-17, an earlier demo that showed figures from the previous pipeline.
+That demo's data file and its four charts were removed the same day.
