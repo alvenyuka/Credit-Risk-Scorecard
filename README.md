@@ -73,7 +73,8 @@ Versions are recorded in `outputs/results.json` (run of 2026-10-06, commit `75ef
 
 ## Results
 
-A points-based credit scorecard that tells a lender which applicants are likely to default and gives a specific reason for every decline. Built on 307,511 Home Credit applications across 8 linked tables, it narrows 62 candidate characteristics to 32 and scores 61,503 held-out applicants at AUC 0.754; approving only the top 80% would have cut credit losses by 47%. Every figure on this page is written by the pipeline and checked by 69 tests in CI.
+A points-based credit scorecard that tells a lender which applicants are likely to default and gives a specific reason for every decline. Built on 307,511 Home Credit applications across 8 linked tables, it narrows 62 candidate characteristics to 32 and scores 61,503 held-out applicants at AUC 0.754; approving only the top 80% would have cut credit losses by 47%. Every figure on this page is written by the pipeline and checked by 69 tests in CI. The model is reviewed the way a bank's validation team would review it, findings
+included, in [`docs/VALIDATION_REPORT.md`](docs/VALIDATION_REPORT.md).
 
 - 307,511 applicants with a known outcome, 8.1% of whom defaulted, from the application and seven linked tables.
 - 62 candidate characteristics, 32 kept after the three gates; 27 of 27 numeric characteristics monotonic.
@@ -194,6 +195,7 @@ demo/                         the live case-study page and how to redeploy it
 Credit_Risk_Scorecard.ipynb   the analysis in four parts, executed end to end
 build_notebook.py             generates the notebook (edit this, not the .ipynb)
 docs/METHODOLOGY.md           full method, results and test descriptions
+docs/VALIDATION_REPORT.md     model validation: soundness, discrimination, calibration, benchmarks, findings
 notes/                        the week-by-week build log, mistakes and corrections included
 ```
 
