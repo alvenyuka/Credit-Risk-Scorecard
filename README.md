@@ -1,10 +1,12 @@
-# Credit Risk Scorecard: explainable approve-or-decline decisions for a consumer lender
+# Credit Risk Scorecard
 
-**A points-based credit scorecard that tells a lender which applicants are likely to default and gives a
-specific reason for every decline. Built on 307,511 Home Credit applications across 8 linked tables, it narrows
-62 candidate characteristics to 32 and scores 61,503 held-out applicants at AUC 0.754; approving only the top
-80% would have cut credit losses by 47%. Every figure on this page is written by the pipeline and checked by
-69 tests in CI.**
+A reason for every decline, and 47% fewer credit losses at an 80% approval rate.
+
+| At a glance | |
+|---|---|
+| **Who decides** | A consumer lender's credit team, approving or declining each application. |
+| **Result** | Approving the top 80% cuts credit losses 47%; AUC 0.754 on 61,503 held-out applicants. |
+| **Proof** | 307,511 applications across 8 tables, 69 tests in CI, and a from-scratch logistic regression that matches scikit-learn. |
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)](#how-to-run)
@@ -70,6 +72,8 @@ flowchart LR
 Versions are recorded in `outputs/results.json` (run of 2026-10-06, commit `75ef602`).
 
 ## Results
+
+A points-based credit scorecard that tells a lender which applicants are likely to default and gives a specific reason for every decline. Built on 307,511 Home Credit applications across 8 linked tables, it narrows 62 candidate characteristics to 32 and scores 61,503 held-out applicants at AUC 0.754; approving only the top 80% would have cut credit losses by 47%. Every figure on this page is written by the pipeline and checked by 69 tests in CI.
 
 - 307,511 applicants with a known outcome, 8.1% of whom defaulted, from the application and seven linked tables.
 - 62 candidate characteristics, 32 kept after the three gates; 27 of 27 numeric characteristics monotonic.
