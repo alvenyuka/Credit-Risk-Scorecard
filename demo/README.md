@@ -12,6 +12,7 @@ The embedded JSON is built from the executed outputs in this repository:
 | Headline metrics, deciles, calibration, example decline, fairness checks | `outputs/results.json` |
 | Approval-policy explorer (50% to 100% in 1% steps) | `outputs/val_scores.parquet`, 45% LGD, credit amount as exposure; the 90/80/70% rows reproduce `outputs/business_impact.json` to the digit |
 | Points table (top 8 characteristics by IV) | `outputs/scorecard_points.json` |
+| Applicant calculator (all 32 characteristics, the `calc` JSON block) | `outputs/scorecard_points.json` (points to 3 decimals) and `outputs/results.json` (base points, offset, factor); score = base points + the chosen bin's points per characteristic, kept within 300 to 850, as in `src/scorecard.py` |
 | LightGBM benchmark | `outputs/challengers.json` |
 
 To rebuild the page after the pipeline is re-run, regenerate the JSON from those files and replace the
