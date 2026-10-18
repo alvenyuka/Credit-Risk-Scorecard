@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Credit Risk Scorecard | Alven Yuka</title>
 <meta name="description" content="A points-based credit scorecard on 307,511 Home Credit applicants: AUC 0.754, KS 0.381, a reason for every decline, and a 47% cut in credit losses at 80% approval. Every figure on this page is read from the repository's executed outputs.">
-<meta name="theme-color" content="#04040a">
+<meta name="theme-color" content="#f5f6f2">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2304040a'/%3E%3Ccircle cx='32' cy='32' r='12' fill='%23e8ff47'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://api.fontshare.com" crossorigin>
 <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600&f[]=cabinet-grotesk@400,500,700&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-:root{--bg:#04040a;--bg-2:#080812;--card:#0b0b17;--fg:#f0f0f8;--fg-2:#c4c4d8;--muted:#9898b8;--faint:#62628a;--border:rgba(255,255,255,.08);--border-strong:rgba(255,255,255,.16);--lime:#e8ff47;--lime-dim:rgba(232,255,71,.14);--on-lime:#04040a;--orange:#ff6b35;--font:"Cabinet Grotesk",system-ui,sans-serif;--display:"Clash Display","Cabinet Grotesk",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,Consolas,monospace;color-scheme:dark}
+:root{--bg:#f5f6f2;--bg-2:#eceee7;--card:#ffffff;--fg:#12161f;--fg-2:#353d4a;--muted:#586273;--faint:#6f7987;--border:rgba(18,22,31,.10);--border-strong:rgba(18,22,31,.20);--lime:#d9f23a;--lime-line:#9fbc00;--lime-dim:rgba(159,188,0,.18);--on-lime:#12161f;--accent:#3d5a00;--orange:#c2410c;--font:"Cabinet Grotesk",system-ui,sans-serif;--display:"Clash Display","Cabinet Grotesk",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,Consolas,monospace;color-scheme:light}
 *,*::before,*::after{box-sizing:border-box}
 html{scroll-behavior:smooth;scroll-padding-top:4.5rem}
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:1.0625rem;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 a{color:inherit;text-decoration-color:var(--border-strong);text-underline-offset:.16em}
 a:hover{text-decoration-color:currentColor}
-:focus-visible{outline:2px solid var(--lime);outline-offset:3px;border-radius:4px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
 ::selection{background:var(--lime);color:var(--on-lime)}
 h1,h2,h3{margin:0;font-weight:500;line-height:1.15;text-wrap:balance}
 p{margin:0}
@@ -25,7 +25,7 @@ ul,ol{margin:0;padding:0;list-style:none}
 .display{font-family:var(--display);font-weight:500;letter-spacing:-.02em}
 .mono{font-family:var(--mono);font-weight:400}
 .wrap{width:min(1180px,100% - 2rem);margin-inline:auto}
-.top{position:sticky;top:0;z-index:40;background:rgba(4,4,10,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--border)}
+.top{position:sticky;top:0;z-index:40;background:rgba(245,246,242,.86);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--border)}
 .top-row{display:flex;align-items:center;gap:1.5rem;height:4rem}
 .brand{display:inline-flex;align-items:center;gap:.4rem;font-family:var(--display);font-weight:600;font-size:1.125rem;text-decoration:none}
 .brand .dot{width:.4rem;height:.4rem;border-radius:50%;background:var(--lime)}
@@ -33,22 +33,22 @@ ul,ol{margin:0;padding:0;list-style:none}
 .nav a{text-decoration:none}.nav a:hover{color:var(--fg)}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;padding:.85rem 1.5rem;border-radius:999px;font-weight:500;font-size:1rem;text-decoration:none;border:1px solid transparent;transition:background-color .15s,border-color .15s,color .15s}
 .btn-sm{padding:.55rem 1.1rem;font-size:.9rem}
-.btn-lime{background:var(--lime);color:var(--on-lime);font-weight:600}.btn-lime:hover{background:#f1ff7a}
-.btn-outline{border-color:var(--border-strong);color:var(--fg)}.btn-outline:hover{border-color:var(--fg);background:rgba(255,255,255,.04)}
-.nav-cta{margin-left:auto;border-color:var(--orange);color:var(--orange)}.nav-cta:hover{background:rgba(255,107,53,.1);border-color:var(--orange);color:var(--orange)}
-.pill{display:inline-flex;align-items:center;gap:.55rem;padding:.4rem .9rem;border-radius:999px;border:1px solid var(--border-strong);background:rgba(255,255,255,.03);font-family:var(--mono);font-size:.75rem;color:var(--fg-2)}
+.btn-lime{background:var(--lime);color:var(--on-lime);font-weight:600}.btn-lime:hover{background:#cbe62a}
+.btn-outline{border-color:var(--border-strong);color:var(--fg)}.btn-outline:hover{border-color:var(--fg);background:rgba(18,22,31,.04)}
+.nav-cta{margin-left:auto;border-color:var(--orange);color:var(--orange)}.nav-cta:hover{background:rgba(194,65,12,.1);border-color:var(--orange);color:var(--orange)}
+.pill{display:inline-flex;align-items:center;gap:.55rem;padding:.4rem .9rem;border-radius:999px;border:1px solid var(--border-strong);background:rgba(18,22,31,.03);font-family:var(--mono);font-size:.75rem;color:var(--fg-2)}
 .pulse{width:.45rem;height:.45rem;border-radius:50%;background:var(--lime);animation:pulse 2s ease-out infinite;flex:none}
-@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(232,255,71,.55)}70%{box-shadow:0 0 0 8px rgba(232,255,71,0)}100%{box-shadow:0 0 0 0 rgba(232,255,71,0)}}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(159,188,0,.5)}70%{box-shadow:0 0 0 8px rgba(159,188,0,0)}100%{box-shadow:0 0 0 0 rgba(159,188,0,0)}}
 .hero{position:relative;overflow:hidden}
-.grid-bg{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);background-size:64px 64px;-webkit-mask-image:radial-gradient(ellipse 85% 80% at 50% 40%,#000 30%,transparent 100%);mask-image:radial-gradient(ellipse 85% 80% at 50% 40%,#000 30%,transparent 100%)}
-.hero::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 60% 50% at 75% 30%,rgba(232,255,71,.07),transparent 70%)}
+.grid-bg{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(18,22,31,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(18,22,31,.03) 1px,transparent 1px);background-size:64px 64px;-webkit-mask-image:radial-gradient(ellipse 85% 80% at 50% 40%,#000 30%,transparent 100%);mask-image:radial-gradient(ellipse 85% 80% at 50% 40%,#000 30%,transparent 100%)}
+.hero::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 60% 50% at 75% 30%,rgba(217,242,58,.30),transparent 70%)}
 .hero-inner{position:relative;padding-block:clamp(3.5rem,8vw,6rem) clamp(3rem,6vw,4.5rem)}
 .hero .pill{margin-bottom:1.75rem}
 .hero h1{font-size:clamp(2.4rem,1rem+5.2vw,5.4rem);line-height:.98;letter-spacing:-.03em;max-width:16ch}
 .lede{margin-top:1.75rem;color:var(--fg-2);font-size:clamp(1.0625rem,.9rem+.5vw,1.2rem);max-width:62ch}
 .actions{display:flex;flex-wrap:wrap;gap:.75rem;margin-top:2rem}
 .stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1rem;margin-top:3rem;padding-top:2rem;border-top:1px solid var(--border)}
-.stat .v{font-family:var(--display);font-size:clamp(1.6rem,1rem+1.6vw,2.4rem);color:var(--lime);line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.stat .v{font-family:var(--display);font-size:clamp(1.6rem,1rem+1.6vw,2.4rem);color:var(--accent);line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .stat .k{display:block;margin-top:.5rem;font-family:var(--mono);font-size:.72rem;color:var(--muted)}
 .section{padding-block:clamp(3.5rem,7vw,6rem)}
 .section+.section{border-top:1px solid var(--border)}
@@ -56,18 +56,18 @@ ul,ol{margin:0;padding:0;list-style:none}
 .section-head .pill{margin-bottom:1.1rem}
 .section-head h2{font-size:clamp(1.9rem,1.2rem+2.6vw,3.4rem);letter-spacing:-.03em;line-height:1}
 .section-head>p{color:var(--muted);max-width:56ch}
-.card{background:var(--card);border:1px solid var(--border);border-radius:1rem;padding:clamp(1.25rem,3vw,2rem);box-shadow:0 12px 24px 0 rgba(255,255,255,.025) inset,0 .5px .5px 0 rgba(255,255,255,.06) inset,0 48px 72px -12px rgba(0,0,0,.24)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:1rem;padding:clamp(1.25rem,3vw,2rem);box-shadow:0 1px 2px rgba(18,22,31,.05),0 12px 32px -16px rgba(18,22,31,.14)}
 .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.25rem}
 .explorer{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:2rem;align-items:start}
 .slider-row{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:1rem;margin-bottom:.75rem}
 .tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .tablewrap table{min-width:520px}
 .explorer>div,.grid2>div{min-width:0}
-.slider-row .big{font-family:var(--display);font-size:3rem;color:var(--lime);line-height:1;font-variant-numeric:tabular-nums}
-input[type=range]{width:100%;accent-color:var(--lime);margin:.5rem 0 1rem}
+.slider-row .big{font-family:var(--display);font-size:3rem;color:var(--accent);line-height:1;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--accent);margin:.5rem 0 1rem}
 .kv{display:grid;grid-template-columns:1fr auto;gap:.5rem 1.5rem;font-size:.9875rem}
 .kv dt{color:var(--muted)}.kv dd{margin:0;font-variant-numeric:tabular-nums;text-align:right;color:var(--fg)}
-.kv dd.lime{color:var(--lime);font-weight:600}
+.kv dd.lime{color:var(--accent);font-weight:600}
 .note{margin-top:1rem;font-size:.85rem;color:var(--faint);line-height:1.5}
 .chart{width:100%;height:auto;display:block}
 .chart text{font-family:var(--mono);font-size:11px;fill:var(--muted)}
@@ -76,13 +76,13 @@ table{width:100%;border-collapse:collapse;font-size:.9rem;font-variant-numeric:t
 th,td{padding:.6rem .5rem;border-bottom:1px solid var(--border);text-align:right;vertical-align:top}
 th:first-child,td:first-child{text-align:left}
 th{font-family:var(--mono);font-weight:400;font-size:.72rem;color:var(--faint);text-transform:lowercase}
-tr.hl td{color:var(--lime);font-weight:600}
+tr.hl td{color:var(--accent);font-weight:600}
 .reasons{display:grid;gap:.75rem;margin-top:1.25rem}
 .reason{display:grid;grid-template-columns:minmax(0,1fr) 5.5rem;gap:1rem;align-items:center}
 .reason .bar{height:.5rem;border-radius:999px;background:var(--border);overflow:hidden}
 .reason .bar i{display:block;height:100%;background:var(--lime)}
 .reason .lab{font-size:.9rem;color:var(--fg-2);margin-bottom:.35rem}
-.reason .pts{font-family:var(--mono);font-size:.8rem;color:var(--lime);text-align:right}
+.reason .pts{font-family:var(--mono);font-size:.8rem;color:var(--accent);text-align:right}
 details{border:1px solid var(--border);border-radius:.75rem;padding:0 1rem;background:var(--card)}
 details+details{margin-top:.75rem}
 summary{cursor:pointer;padding:.9rem 0;display:flex;justify-content:space-between;gap:1rem;font-weight:500}
@@ -231,14 +231,14 @@ details table{margin-bottom:1rem}
     var y = function(v){ return T + ih - v*ih; };
     var path = function(key){ return D.policy.map(function(r,i){ return (i?'L':'M') + x(r.ar).toFixed(1) + ' ' + y(r[key]).toFixed(1); }).join(' '); };
     var s = '<line class="axis" x1="'+L+'" y1="'+(T+ih)+'" x2="'+(W-R)+'" y2="'+(T+ih)+'"/>';
-    [0,.25,.5,.75,1].forEach(function(v){ s += '<line x1="'+L+'" y1="'+y(v)+'" x2="'+(W-R)+'" y2="'+y(v)+'" stroke="rgba(255,255,255,.06)"/><text x="'+(L-8)+'" y="'+(y(v)+4)+'" text-anchor="end">'+Math.round(v*100)+'%</text>'; });
+    [0,.25,.5,.75,1].forEach(function(v){ s += '<line x1="'+L+'" y1="'+y(v)+'" x2="'+(W-R)+'" y2="'+y(v)+'" stroke="rgba(18,22,31,.06)"/><text x="'+(L-8)+'" y="'+(y(v)+4)+'" text-anchor="end">'+Math.round(v*100)+'%</text>'; });
     [50,60,70,80,90,100].forEach(function(a){ s += '<text x="'+x(a)+'" y="'+(H-14)+'" text-anchor="middle">'+a+'%</text>'; });
-    s += '<path d="'+path('avoid')+'" fill="none" stroke="#e8ff47" stroke-width="2.5"/>';
-    s += '<path d="'+path('gdecl')+'" fill="none" stroke="#ff6b35" stroke-width="2.5"/>';
+    s += '<path d="'+path('avoid')+'" fill="none" stroke="#9fbc00" stroke-width="2.5"/>';
+    s += '<path d="'+path('gdecl')+'" fill="none" stroke="#c2410c" stroke-width="2.5"/>';
     var r = D.policy.filter(function(x){ return x.ar === ar; })[0];
-    s += '<line x1="'+x(ar)+'" y1="'+T+'" x2="'+x(ar)+'" y2="'+(T+ih)+'" stroke="rgba(255,255,255,.25)" stroke-dasharray="3 3"/>';
-    s += '<circle cx="'+x(ar)+'" cy="'+y(r.avoid)+'" r="5" fill="#e8ff47"/><circle cx="'+x(ar)+'" cy="'+y(r.gdecl)+'" r="5" fill="#ff6b35"/>';
-    s += '<text x="'+(L+6)+'" y="'+(T+12)+'" fill="#e8ff47" style="fill:#e8ff47">loss avoided</text><text x="'+(L+6)+'" y="'+(T+28)+'" style="fill:#ff6b35">good borrowers declined</text>';
+    s += '<line x1="'+x(ar)+'" y1="'+T+'" x2="'+x(ar)+'" y2="'+(T+ih)+'" stroke="rgba(18,22,31,.25)" stroke-dasharray="3 3"/>';
+    s += '<circle cx="'+x(ar)+'" cy="'+y(r.avoid)+'" r="5" fill="#9fbc00"/><circle cx="'+x(ar)+'" cy="'+y(r.gdecl)+'" r="5" fill="#c2410c"/>';
+    s += '<text x="'+(L+6)+'" y="'+(T+12)+'" fill="#3d5a00" style="fill:#3d5a00">loss avoided</text><text x="'+(L+6)+'" y="'+(T+28)+'" style="fill:#c2410c">good borrowers declined</text>';
     s += '<text x="'+(W-R)+'" y="'+(H-2)+'" text-anchor="end">approval rate</text>';
     $('policyChart').innerHTML = s;
   }
@@ -256,10 +256,10 @@ details table{margin-bottom:1rem}
     var s = '<line class="axis" x1="'+L+'" y1="'+(T+ih)+'" x2="'+(W-R)+'" y2="'+(T+ih)+'"/>';
     D.deciles.forEach(function(d,i){
       var h = d.default_rate/max*ih, cx = L + iw/n*(i+0.5);
-      s += '<rect x="'+(cx-bw/2)+'" y="'+(T+ih-h)+'" width="'+bw+'" height="'+h+'" rx="3" fill="'+(i<2?'#ff6b35':'#e8ff47')+'" opacity="'+(0.55+0.45*(i/(n-1)))+'"/>';
-      s += '<text x="'+cx+'" y="'+(T+ih-h-6)+'" text-anchor="middle" style="fill:#f0f0f8">'+(d.default_rate*100).toFixed(1)+'%</text>';
+      s += '<rect x="'+(cx-bw/2)+'" y="'+(T+ih-h)+'" width="'+bw+'" height="'+h+'" rx="3" fill="'+(i<2?'#c2410c':'#9fbc00')+'" opacity="'+(0.55+0.45*(i/(n-1)))+'"/>';
+      s += '<text x="'+cx+'" y="'+(T+ih-h-6)+'" text-anchor="middle" style="fill:#12161f">'+(d.default_rate*100).toFixed(1)+'%</text>';
       s += '<text x="'+cx+'" y="'+(T+ih+16)+'" text-anchor="middle">'+Math.round(d.score_min)+'</text>';
-      s += '<text x="'+cx+'" y="'+(T+ih+30)+'" text-anchor="middle" style="fill:#62628a">to '+Math.round(d.score_max)+'</text>';
+      s += '<text x="'+cx+'" y="'+(T+ih+30)+'" text-anchor="middle" style="fill:#6f7987">to '+Math.round(d.score_max)+'</text>';
     });
     s += '<text x="'+(W-R)+'" y="'+(H-4)+'" text-anchor="end">score band (lowest to highest)</text>';
     $('decileChart').innerHTML = s;
@@ -283,7 +283,7 @@ details table{margin-bottom:1rem}
   // Points table
   $('pointsIntro').textContent = 'The ' + D.n_features_total + ' characteristics that survived selection, ranked by information value. The ' + D.points.length + ' strongest are shown here with every bin and its points; the full table is outputs/scorecard_points.json in the repository. Points move in one direction within each characteristic, which is what coarse classing enforces.';
   $('pointsList').innerHTML = D.points.map(function(f,i){
-    var rows = f.bins.map(function(b){ return '<tr><td>' + b.bin + '</td><td>' + num(b.n) + '</td><td' + (b.points<0?' style="color:#ff6b35"':'') + '>' + (b.points>0?'+':'') + b.points.toFixed(1) + '</td></tr>'; }).join('');
+    var rows = f.bins.map(function(b){ return '<tr><td>' + b.bin + '</td><td>' + num(b.n) + '</td><td' + (b.points<0?' style="color:#c2410c"':'') + '>' + (b.points>0?'+':'') + b.points.toFixed(1) + '</td></tr>'; }).join('');
     return '<details' + (i===0?' open':'') + '><summary><span>' + (names[f.feature]||f.feature) + ' <span class="mono" style="color:var(--faint);font-size:.72rem">' + f.feature + '</span></span><span class="iv">IV ' + f.iv.toFixed(3) + ' · ' + f.bins.length + ' bins</span></summary><table><thead><tr><th>bin</th><th>training applicants</th><th>points</th></tr></thead><tbody>' + rows + '</tbody></table></details>';
   }).join('');
 
