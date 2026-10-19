@@ -9,7 +9,7 @@ import pandas as pd
 
 from baseline_features import DAYS_EMPLOYED_ANOMALY, engineer_baseline
 from feature_lists import BASE_NUMERIC_COLS, CATEGORICAL_COLS
-from fit_model import correlation_gate, eliminate_wrong_signs, rank_by_iv
+from fit_model import correlation_gate, eliminate_wrong_signs, find_worst_positive, rank_by_iv
 
 SEED = 42
 
@@ -88,3 +88,17 @@ def test_sign_gate_removes_a_reversed_suppressor():
     kept, removed = eliminate_wrong_signs(Xs, y, ["x1", "x2", "x3"])
     assert kept == ["x1", "x3"]
     assert [c for c, _ in removed] == ["x2"] and removed[0][1] > 0
+
+
+def test_worst_positive_picks_the_largest_and_breaks_ties_by_later_name():
+    """The same rule as the old max(key=(coefficient, name)): equal coefficients remove the later name."""
+    assert find_worst_positive(["a", "b", "c"], [0.1, 0.5, 0.3]) == ("b", 0.5)
+    assert find_worst_positive(["a", "b", "c"], [0.5, 0.5, 0.3]) == ("b", 0.5)
+    assert find_worst_positive(["b", "a", "c"], [0.5, 0.5, 0.3]) == ("b", 0.5)  # column order does not matter
+    assert find_worst_positive(["a", "b"], [-0.2, 0.0]) == (None, 0.0)         # nothing positive
+
+
+def test_worst_positive_skips_a_nan_coefficient():
+    """The old `b > 0` test was False for NaN, so a NaN coefficient was never chosen for removal."""
+    assert find_worst_positive(["a", "b", "c"], [np.nan, 0.3, 0.2]) == ("b", 0.3)
+    assert find_worst_positive(["a", "b"], [np.nan, np.nan]) == (None, 0.0)

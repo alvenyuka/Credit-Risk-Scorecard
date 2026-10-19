@@ -340,7 +340,7 @@ What it does not do is listed under Known Limitations below, once each.
 ## Tests
 
 ```bash
-python -m pytest        # 69 tests, about 20 seconds
+python -m pytest        # 71 tests, about 20 seconds
 ```
 
 The from-scratch implementations are the whole point of this repo, so they are

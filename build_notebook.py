@@ -984,7 +984,17 @@ code("""
 from woe_iv import is_monotonic_woe
 
 decile_fits = {c: fit_woe(X_train[c], y_train, n_bins=10) for c in MODEL_NUMERIC}
-zigzag = [c for c in sorted(decile_fits, key=lambda c: -decile_fits[c]["iv"]) if not is_monotonic_woe(decile_fits[c])]
+
+
+def minus_iv(col):
+    return -decile_fits[col]["iv"]
+
+
+# Characteristics whose WoE zig-zags, strongest IV first
+zigzag = []
+for c in sorted(decile_fits, key=minus_iv):
+    if not is_monotonic_woe(decile_fits[c]):
+        zigzag.append(c)
 example = zigzag[0]
 coarse = fit_woe(X_train[example], y_train, n_bins=10, binning="monotone")
 print(f"numeric characteristics whose ten-bin WoE zig-zags: {len(zigzag)} of {len(MODEL_NUMERIC)}")
@@ -1078,8 +1088,19 @@ Not all 62 candidates should enter. Each passes three gates, and each removal ha
 """)
 
 code("""
-iv_ranked = sorted(woe_fits, key=lambda c: (-ivs[c], c))   # highest IV first; ties broken by name
-iv_kept = [c for c in iv_ranked if ivs[c] >= IV_THRESHOLD]
+# Highest IV first; sorting (negative IV, name) breaks ties by name
+pairs = []
+for c in woe_fits:
+    pairs.append((-ivs[c], c))
+pairs.sort()
+iv_ranked = []
+for neg_iv, c in pairs:
+    iv_ranked.append(c)
+
+iv_kept = []
+for c in iv_ranked:
+    if ivs[c] >= IV_THRESHOLD:
+        iv_kept.append(c)
 print(f"Gate 1: {len(iv_kept)} of {len(iv_ranked)} characteristics have IV >= {IV_THRESHOLD}\\n")
 for c in iv_ranked[:12]:
     print(f"  {c:30s} IV={ivs[c]:.4f}  ({iv_strength(ivs[c])})")
@@ -1117,7 +1138,11 @@ from woe_iv import transform_woe
 
 def woe_encode(frame, cols):
     # One column per characteristic: each value replaced by the WoE of its bin
-    return np.column_stack([transform_woe(frame[c], woe_fits[c]).to_numpy(dtype=float) for c in cols])
+    columns = []
+    for c in cols:
+        woe_values = transform_woe(frame[c], woe_fits[c])
+        columns.append(woe_values.to_numpy(dtype=float))
+    return np.column_stack(columns)
 
 
 W_iv = woe_encode(X_train, iv_kept)
@@ -1133,7 +1158,9 @@ already kept is at most 0.9.
 
 code("""
 corr = np.corrcoef(W_iv, rowvar=False)
-pos = {c: i for i, c in enumerate(iv_kept)}
+pos = {}
+for i, c in enumerate(iv_kept):
+    pos[c] = i
 
 fig, ax = plt.subplots(figsize=(11, 9))
 top15 = iv_kept[:15]
@@ -1148,7 +1175,13 @@ plt.show()
 code("""
 corr_kept, corr_dropped = [], []
 for c in iv_kept:
-    partner = next((k for k in corr_kept if abs(corr[pos[c], pos[k]]) > CORRELATION_THRESHOLD), None)
+    # The first already-kept characteristic that c is too correlated with, if any
+    partner = None
+    for k in corr_kept:
+        if abs(corr[pos[c], pos[k]]) > CORRELATION_THRESHOLD:
+            partner = k
+            break
+
     if partner is None:
         corr_kept.append(c)
     else:
@@ -1172,21 +1205,34 @@ positive coefficient, refit, and repeat until every coefficient is negative.
 """)
 
 code("""
-W_corr = W_iv[:, [pos[c] for c in corr_kept]]
-m, s = W_corr.mean(axis=0), W_corr.std(axis=0)
+surviving_columns = []
+for c in corr_kept:
+    surviving_columns.append(pos[c])
+W_corr = W_iv[:, surviving_columns]
+
+m = W_corr.mean(axis=0)
+s = W_corr.std(axis=0)
 s[s == 0] = 1.0
 Ws = (W_corr - m) / s                       # put every column on the same scale for the solver
 
-sign_kept, sign_removed = list(corr_kept), []
+
+# find_worst_positive returns the characteristic with the largest positive coefficient (the most
+# strongly flipped one) and that coefficient. Equal coefficients: the later name wins.
+from fit_model import find_worst_positive
+
+sign_kept = list(corr_kept)
+sign_removed = []
 while True:
-    cols_now = [corr_kept.index(c) for c in sign_kept]
+    cols_now = []
+    for c in sign_kept:
+        cols_now.append(corr_kept.index(c))
     fit = LogisticRegression(max_iter=3000, class_weight="balanced").fit(Ws[:, cols_now], y_train)
-    wrong = [(c, float(b)) for c, b in zip(sign_kept, fit.coef_.ravel()) if b > 0]
-    if not wrong:
+
+    worst_name, worst_coef = find_worst_positive(sign_kept, fit.coef_.ravel())
+    if worst_name is None:
         break
-    victim = max(wrong, key=lambda t: (t[1], t[0]))     # the most strongly flipped characteristic
-    sign_removed.append(victim)
-    sign_kept.remove(victim[0])
+    sign_removed.append((worst_name, worst_coef))
+    sign_kept.remove(worst_name)
 
 print(f"Gate 3: {len(sign_removed)} removed, {len(sign_kept)} kept")
 for c, b in sign_removed:
@@ -1223,19 +1269,22 @@ from metrics_scratch import auc_rank_sum
 
 kept_cols = list(sign_kept)
 while True:
-    Xw_train, Xw_val = woe_encode(X_train, kept_cols), woe_encode(X_val, kept_cols)
-    mean, std = Xw_train.mean(axis=0), Xw_train.std(axis=0)
+    Xw_train = woe_encode(X_train, kept_cols)
+    Xw_val = woe_encode(X_val, kept_cols)
+    mean = Xw_train.mean(axis=0)
+    std = Xw_train.std(axis=0)
     std[std == 0] = 1.0
-    Xw_train_s, Xw_val_s = (Xw_train - mean) / std, (Xw_val - mean) / std   # scaled on training statistics
+    Xw_train_s = (Xw_train - mean) / std
+    Xw_val_s = (Xw_val - mean) / std        # the holdout is scaled on the training statistics
 
     scratch = FromScratchLogisticRegression(lr=0.5, n_iter=3000, l2=1e-3)
     scratch.fit(Xw_train_s, y_train.to_numpy(), class_weight="balanced")
-    wrong = [(c, float(b)) for c, b in zip(kept_cols, scratch.coef_) if b > 0]
-    if not wrong:
+
+    worst_name, worst_coef = find_worst_positive(kept_cols, scratch.coef_)
+    if worst_name is None:
         break
-    victim = max(wrong, key=lambda t: (t[1], t[0]))
-    sign_removed.append(victim)
-    kept_cols.remove(victim[0])
+    sign_removed.append((worst_name, worst_coef))
+    kept_cols.remove(worst_name)
 
 full_auc = auc_rank_sum(y_val, scratch.predict_proba(Xw_val_s))
 print(f"characteristics in the scorecard: {len(kept_cols)} of {len(woe_fits)}")
@@ -1719,11 +1768,17 @@ ablation = read_results()["metrics"]["prohibited_basis_ablation"]
 pdo = m["scorecard_factor"] * np.log(2)
 near = m["observed_odds_near_base_score"]
 top80 = policy.loc[np.isclose(policy["approval_rate"], 0.8)].iloc[0]
-overdue = next(d for d in m["correlation_gate_dropped"] if d["dropped"] == "BUREAU_OVERDUE_MEAN")
+overdue = None
+for d in m["correlation_gate_dropped"]:
+    if d["dropped"] == "BUREAU_OVERDUE_MEAN":
+        overdue = d
+        break
+sex_iv = ablation["prohibited_bases_iv"]["CODE_GENDER"]
+marital_iv = ablation["prohibited_bases_iv"]["NAME_FAMILY_STATUS"]
 
 decisions = [
     ("Leave out sex and marital status (6.1)",
-     "Use them: IV {:.3f} and {:.3f}".format(*ablation["prohibited_bases_iv"].values()),
+     f"Use them: IV {sex_iv:.3f} and {marital_iv:.3f}",
      f"holdout AUC {ablation['val_auc_sklearn_final_features']:.4f} without them, "
      f"{ablation['val_auc_sklearn_with_prohibited_bases']:.4f} with them",
      f"{ablation['val_auc_sklearn_with_prohibited_bases'] - ablation['val_auc_sklearn_final_features']:.4f} AUC "
@@ -1787,11 +1842,19 @@ decisions = [
 log = pd.DataFrame(decisions, columns=["Decision", "Alternative considered", "Evidence from this run", "Trade-off accepted"])
 
 
-def markdown_table(df):
-    # A plain markdown table; pipes inside cells (as in |r|) are escaped so they don't split columns
-    cell = lambda v: str(v).replace("|", "\\\\|")
-    rows = [df.columns, ["---"] * df.shape[1], *df.itertuples(index=False)]
-    return "\\n".join("| " + " | ".join(cell(v) for v in r) + " |" for r in rows)
+def clean(value):
+    # Pipes inside cells (as in |r|) are escaped so they don't split columns
+    return str(value).replace("|", "\\\\|")
+
+
+X    lines = []
+    header = [clean(name) for name in df.columns]
+    lines.append("| " + " | ".join(header) + " |")
+    lines.append("| " + " | ".join(["---"] * len(header)) + " |")
+    for row in df.itertuples(index=False):
+        cells = [clean(value) for value in row]
+        lines.append("| " + " | ".join(cells) + " |")
+    return "\\n".join(lines)
 
 
 display(Markdown(markdown_table(log)))
@@ -1837,9 +1900,19 @@ ref = read_results()["metrics"]
 def same(a, b):
     # Compare nested results, allowing only floating-point rounding differences
     if isinstance(a, dict):
-        return set(a) == set(b) and all(same(a[k], b[k]) for k in a)
+        if set(a) != set(b):
+            return False
+        for key in a:
+            if not same(a[key], b[key]):
+                return False
+        return True
     if isinstance(a, (list, tuple)):
-        return len(a) == len(b) and all(same(x, z) for x, z in zip(a, b))
+        if len(a) != len(b):
+            return False
+        for item_a, item_b in zip(a, b):
+            if not same(item_a, item_b):
+                return False
+        return True
     if isinstance(a, float) or isinstance(b, float):
         return math.isclose(a, b, rel_tol=1e-9, abs_tol=1e-9)
     return a == b
@@ -1852,7 +1925,7 @@ print(f"notebook figures match outputs/results.json ({len(summary)} entries chec
 """)
 
 md("""
-**Step 15.2:** Record this run: date, runtime, peak memory, code version and library versions, written to
+**Step 15.2:** Record this run: date, runtime, code version and library versions, written to
 `outputs/notebook_run.json` next to the pipeline's results.
 """)
 
@@ -1862,43 +1935,31 @@ import subprocess
 from datetime import datetime, timezone
 from importlib.metadata import PackageNotFoundError, version
 
+# The commit the code was at when the notebook ran, and whether the code had edits not yet committed.
+# If git or a package is missing the value is recorded as None instead of stopping the notebook.
+try:
+    git_commit = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+    changed = subprocess.run(["git", "status", "--porcelain", "--", "src", "tests", "build_notebook.py"],
+                             capture_output=True, text=True).stdout.strip()
+    uncommitted_code_changes = changed != ""
+except OSError:
+    git_commit = None
+    uncommitted_code_changes = None
 
-def package_version(name):
+package_versions = {}
+for package in ["numpy", "pandas", "scikit-learn", "scipy", "matplotlib", "seaborn"]:
     try:
-        return version(name)
+        package_versions[package] = version(package)
     except PackageNotFoundError:
-        return None
+        package_versions[package] = None
 
-
-def git(*args):
-    try:
-        return subprocess.run(["git", *args], capture_output=True, text=True, check=True).stdout.strip()
-    except Exception:
-        return None
-
-
-def peak_memory_gb():
-    try:
-        import psutil
-        info = psutil.Process().memory_info()
-        peak = getattr(info, "peak_wset", None)  # Windows
-        if peak is None:
-            import resource  # Linux and macOS
-            peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024
-        return round(peak / 1e9, 1)
-    except Exception:
-        return None
-
-
-uncommitted = git("status", "--porcelain", "--", ".", ":(exclude)*.ipynb", ":(exclude)figs", ":(exclude)outputs")
 run_record = {
     "run_date_utc": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
     "runtime_minutes": round((time.time() - RUN_STARTED) / 60),
-    "peak_memory_gb": peak_memory_gb(),
-    "git_commit": git("rev-parse", "HEAD"),
-    "uncommitted_code_changes": None if uncommitted is None else bool(uncommitted),
+    "git_commit": git_commit,
+    "uncommitted_code_changes": uncommitted_code_changes,
     "python": platform.python_version(),
-    "packages": {p: package_version(p) for p in ("numpy", "pandas", "scikit-learn", "scipy", "matplotlib", "seaborn")},
+    "packages": package_versions,
     "results_checked_against": "outputs/results.json",
     "entries_checked": len(summary),
     "holdout_auc": float(full_auc),

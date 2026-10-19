@@ -17,6 +17,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from scipy.stats import pointbiserialr
 
 from business_impact import lending_policy_table
 from feature_lists import PROHIBITED_BASES
@@ -104,40 +105,25 @@ def select_declined_example(scores: pd.Series, y_val: pd.Series, cut_off: float)
     return below.index[0]
 
 
-def summarise(result, sc, X_val, y_val, scores) -> dict:
-    """Every holdout figure the README, METHODOLOGY and notebook report."""
-    y = y_val.to_numpy()
+def check_scores_agree(result, sc, X_val, y):
+    """Check the points table and the fitted model give the same scores and ranking.
+
+    Returns pd_val, the default probability of each holdout applicant.
+    """
     raw_val = score_dataframe(X_val, sc, clip=False)
     if not np.allclose(raw_val.to_numpy(), _matrix_scores(result["Xw_val"], sc)):
         raise AssertionError("points-table scores and matrix scores disagree")
+
     pd_val = score_to_pd(raw_val, sc)
     auc_from_pd = auc_rank_sum(y, pd_val)
     if abs(auc_from_pd - result["val_auc"]) > 1e-9:
         raise AssertionError("scorecard ranking differs from the fitted model's ranking")
+    return pd_val
 
-    train_scores = np.clip(_matrix_scores(result["Xw_train"], sc), 300, 850)
+
+def headline_metrics(result, pd_val, y) -> dict:
+    """Holdout AUC (with a bootstrap interval), KS, GINI and the agreement with scikit-learn."""
     auc_lo, auc_hi = bootstrap_auc_ci(y, pd_val, n_boot=500, seed=42)
-    deciles = default_rate_by_score_decile(scores.to_numpy(), y)
-    calib = calibration_by_decile(pd_val, y)
-
-    near = (scores >= BASE_SCORE - 20) & (scores < BASE_SCORE + 20)
-    n_bad_near = int((y_val[near] == 1).sum())
-    p = result["train_bad_rate"]
-
-    cut = lending_policy_table(scores.to_numpy(), y, X_val["AMT_CREDIT"].to_numpy(),
-                               approval_rates=(EXAMPLE_APPROVAL_RATE,)).iloc[0]["cut_off_score"]
-    ex_idx = select_declined_example(scores, y_val, cut)
-    ex_reasons = reason_codes(X_val.loc[ex_idx], sc, top_n=3)
-
-    from scipy.stats import pointbiserialr
-    corr, _ = pointbiserialr(y, scores)
-    if corr >= -0.2:
-        raise AssertionError("scorecard should be meaningfully negatively correlated with default")
-
-    numeric_kept = [c for c in sc["kept_cols"] if not result["woe_fits"][c]["is_categorical"]]
-    model = result["model"]
-    emp_pts = sc["points_tables"].get("EMPLOYED_YEARS")
-
     return {
         "val_auc": float(result["val_auc"]),
         "val_auc_ci95_bootstrap": [auc_lo, auc_hi],
@@ -145,38 +131,93 @@ def summarise(result, sc, X_val, y_val, scores) -> dict:
         "val_gini": 2 * result["val_auc"] - 1,
         "pred_corr_vs_sklearn": result["pred_corr"],
         "coef_diff_max_vs_sklearn": result["coef_diff_max"],
+    }
+
+
+def feature_screening_summary(result, sc) -> dict:
+    """How many features survived each gate, which ones were dropped, and the sign and monotonicity checks."""
+    correlation_dropped = []
+    for dropped, kept, r in result["correlation_gate_dropped"]:
+        correlation_dropped.append({"dropped": dropped, "kept": kept, "r": r})
+
+    sign_removed = []
+    for feature, coefficient in result["sign_gate_removed"]:
+        sign_removed.append({"feature": feature, "coefficient_at_removal": coefficient})
+
+    numeric_kept = []
+    for col in sc["kept_cols"]:
+        if not result["woe_fits"][col]["is_categorical"]:
+            numeric_kept.append(col)
+    n_monotonic = 0
+    for col in numeric_kept:
+        if is_monotonic_woe(result["woe_fits"][col]):
+            n_monotonic += 1
+
+    return {
         "n_candidate_features": result["n_candidate_features"],
         "n_categorical_features": result["n_categorical_features"],
         "n_after_iv_screen": result["n_after_iv_screen"],
         "n_after_correlation_gate": result["n_after_correlation_gate"],
         "n_features_kept": len(sc["kept_cols"]),
-        "correlation_gate_dropped": [
-            {"dropped": c, "kept": k, "r": r} for c, k, r in result["correlation_gate_dropped"]],
-        "sign_gate_removed": [
-            {"feature": c, "coefficient_at_removal": b} for c, b in result["sign_gate_removed"]],
+        "correlation_gate_dropped": correlation_dropped,
+        "sign_gate_removed": sign_removed,
         "all_coefficients_negative": bool((sc["coef_raw"] < 0).all()),
-        "n_numeric_features_monotonic_woe": int(sum(bool(is_monotonic_woe(result["woe_fits"][c]))
-                                                    for c in numeric_kept)),
+        "n_numeric_features_monotonic_woe": n_monotonic,
         "n_numeric_features_kept": len(numeric_kept),
+    }
+
+
+def odds_summary(result, sc, y_val, y, scores, pd_val) -> dict:
+    """Bad rates, intercepts and the odds at the base score, implied by the scorecard and observed."""
+    near_base = (scores >= BASE_SCORE - 20) & (scores < BASE_SCORE + 20)
+    n_near = int(near_base.sum())
+    n_bad_near = int((y_val[near_base] == 1).sum())
+    if n_bad_near > 0:
+        observed_good_to_bad = float((n_near - n_bad_near) / n_bad_near)
+    else:
+        observed_good_to_bad = None
+
+    train_bad_rate = result["train_bad_rate"]
+    return {
         "n_validation_rows": int(len(y_val)),
-        "train_bad_rate": p,
+        "train_bad_rate": train_bad_rate,
         "val_bad_rate": float(y.mean()),
         "intercept_balanced": sc["intercept_balanced"],
         "intercept_prior_corrected": sc["intercept"],
         "implied_odds_at_base_score": odds_at_score(BASE_SCORE, sc),
         "observed_odds_near_base_score": {
             "score_band": [BASE_SCORE - 20, BASE_SCORE + 20],
-            "n": int(near.sum()),
-            "good_to_bad": float((near.sum() - n_bad_near) / n_bad_near) if n_bad_near else None,
+            "n": n_near,
+            "good_to_bad": observed_good_to_bad,
         },
         "base_points_implied_odds": odds_at_score(sc["base_points"], sc),
-        "train_good_to_bad_odds": float((1 - p) / p),
+        "train_good_to_bad_odds": float((1 - train_bad_rate) / train_bad_rate),
         "mean_predicted_pd_val": float(pd_val.mean()),
+    }
+
+
+def calibration_summary(pd_val, y, scores) -> dict:
+    """Predicted against observed default rate by PD decile, and the default rate by score decile."""
+    calib = calibration_by_decile(pd_val, y)
+    deciles = default_rate_by_score_decile(scores.to_numpy(), y)
+    return {
         "calibration_by_decile": _records(calib),
         "calibration_max_abs_gap": float(calib["gap"].abs().max()),
         "default_rate_by_score_decile": _records(deciles),
         "default_rate_lowest_decile": float(deciles["default_rate"].iloc[0]),
         "default_rate_highest_decile": float(deciles["default_rate"].iloc[-1]),
+    }
+
+
+def score_distribution_summary(result, sc, scores, y_val, y) -> dict:
+    """Score range, clipping, PSI against the training scores, and the link between score and default."""
+    train_scores = np.clip(_matrix_scores(result["Xw_train"], sc), 300, 850)
+
+    corr, _ = pointbiserialr(y, scores)
+    if corr >= -0.2:
+        raise AssertionError("scorecard should be meaningfully negatively correlated with default")
+
+    return {
         "psi_train_to_holdout_scores": float(psi(train_scores, scores.to_numpy())),
         "point_biserial_score_vs_default": float(corr),
         "score_min": float(scores.min()),
@@ -188,24 +229,64 @@ def summarise(result, sc, X_val, y_val, scores) -> dict:
         "scorecard_base_points": float(sc["base_points"]),
         "scorecard_factor": float(sc["factor"]),
         "scorecard_offset": float(sc["offset"]),
-        "example_declined_applicant": {
-            "holdout_row": int(ex_idx),
-            "outcome": "defaulted",
-            "score": float(scores.loc[ex_idx]),
-            "cut_off_score_at_80pct_approval": float(cut),
-            "reasons_points_below_best_bin": [{"feature": c, "points": v} for c, v in ex_reasons],
-        },
-        "reg_b_age_62_plus": result["age_check"],
-        "employed_years_missing_bin_points": (
-            float(emp_pts[MISSING_LABEL]) if emp_pts is not None and MISSING_LABEL in emp_pts.index else None),
-        "solver": {
-            "n_iter": int(model.n_iter_),
-            "max_iter": int(model.n_iter),
-            "tol": float(model.tol),
-            "converged": bool(model.converged_),
-            "final_cost_change": model.final_cost_change_,
-        },
     }
+
+
+def declined_example_summary(sc, X_val, y_val, y, scores) -> dict:
+    """One defaulted holdout applicant who falls below the 80% approval cut-off, with the reasons."""
+    policy = lending_policy_table(scores.to_numpy(), y, X_val["AMT_CREDIT"].to_numpy(),
+                                  approval_rates=(EXAMPLE_APPROVAL_RATE,))
+    cut = policy.iloc[0]["cut_off_score"]
+    example_row = select_declined_example(scores, y_val, cut)
+    reasons = reason_codes(X_val.loc[example_row], sc, top_n=3)
+
+    reason_list = []
+    for feature, points in reasons:
+        reason_list.append({"feature": feature, "points": points})
+
+    return {
+        "holdout_row": int(example_row),
+        "outcome": "defaulted",
+        "score": float(scores.loc[example_row]),
+        "cut_off_score_at_80pct_approval": float(cut),
+        "reasons_points_below_best_bin": reason_list,
+    }
+
+
+def solver_summary(model) -> dict:
+    """How the from-scratch gradient descent finished."""
+    return {
+        "n_iter": int(model.n_iter_),
+        "max_iter": int(model.n_iter),
+        "tol": float(model.tol),
+        "converged": bool(model.converged_),
+        "final_cost_change": model.final_cost_change_,
+    }
+
+
+def summarise(result, sc, X_val, y_val, scores) -> dict:
+    """Every holdout figure the README, METHODOLOGY and notebook report."""
+    y = y_val.to_numpy()
+    pd_val = check_scores_agree(result, sc, X_val, y)
+
+    summary = {}
+    summary.update(headline_metrics(result, pd_val, y))
+    summary.update(feature_screening_summary(result, sc))
+    summary.update(odds_summary(result, sc, y_val, y, scores, pd_val))
+    summary.update(calibration_summary(pd_val, y, scores))
+    summary.update(score_distribution_summary(result, sc, scores, y_val, y))
+    summary["example_declined_applicant"] = declined_example_summary(sc, X_val, y_val, y, scores)
+    summary["reg_b_age_62_plus"] = result["age_check"]
+
+    # The Missing bin of EMPLOYED_YEARS has its own points; None if the feature or bin is absent.
+    employed_points = sc["points_tables"].get("EMPLOYED_YEARS")
+    if employed_points is not None and MISSING_LABEL in employed_points.index:
+        summary["employed_years_missing_bin_points"] = float(employed_points[MISSING_LABEL])
+    else:
+        summary["employed_years_missing_bin_points"] = None
+
+    summary["solver"] = solver_summary(result["model"])
+    return summary
 
 
 def points_table_records(result, sc) -> list:

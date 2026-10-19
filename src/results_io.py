@@ -34,6 +34,19 @@ def _git_commit() -> str | None:
         return None
 
 
+def _uncommitted_code_changes() -> bool | None:
+    """True if src/, tests/ or build_notebook.py differ from the commit; None outside a git checkout."""
+    try:
+        out = subprocess.run(
+            ["git", "status", "--porcelain", "--", "src", "tests", "build_notebook.py"],
+            cwd=Path(__file__).resolve().parent.parent,
+            capture_output=True, text=True, timeout=10, check=True,
+        )
+        return out.stdout.strip() != ""
+    except Exception:
+        return None
+
+
 def _package_versions() -> dict:
     """Installed versions of the libraries the results depend on."""
     versions = {}
@@ -68,6 +81,7 @@ def write_results(metrics: dict, *, data_source: str = "real", notes: str | None
     payload = {
         "generated_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "git_commit": _git_commit(),
+        "uncommitted_code_changes": _uncommitted_code_changes(),
         "data_source": data_source,
         "python": platform.python_version(),
         "packages": _package_versions(),

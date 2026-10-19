@@ -58,37 +58,71 @@ def fit_monotone_bins(x: pd.Series, y: pd.Series, n_bins: int = 10, zero_share: 
     Missing values are not binned here; fit_woe gives them their own bin. Returns the merged edges.
     """
     finite = x.dropna().astype(float)
-    target = pd.Series(np.asarray(y), index=x.index).loc[finite.index].to_numpy(dtype=float)
     if len(finite) == 0:
         return fit_continuous_bins(x, n_bins)
-    if (finite >= 0).all() and (finite == 0).mean() >= zero_share and (finite > 0).any():
-        inner = np.unique(np.quantile(finite[finite > 0], np.linspace(0, 1, n_bins + 1))[1:-1])
-        edges = np.concatenate([[-np.inf, 0.0], inner[inner > 0], [np.inf]]).astype(float)
+    target = pd.Series(np.asarray(y), index=x.index).loc[finite.index].to_numpy(dtype=float)
+
+    # Step 1: the fine bin edges.
+    never_negative = (finite >= 0).all()
+    share_zero = (finite == 0).mean()
+    has_positive = (finite > 0).any()
+    if never_negative and share_zero >= zero_share and has_positive:
+        # Zero gets its own bin; the positive values are cut at their own deciles.
+        positive = finite[finite > 0]
+        quantiles = np.quantile(positive, np.linspace(0, 1, n_bins + 1))
+        inner = np.unique(quantiles[1:-1])
+        inner = inner[inner > 0]
+        edges = np.concatenate([[-np.inf, 0.0], inner, [np.inf]]).astype(float)
     else:
         edges = fit_continuous_bins(finite, n_bins)
     if len(edges) < 3:
         return edges
 
+    # Count the applicants and the defaults in each fine bin, and drop the empty bins.
     codes = pd.cut(finite, bins=edges, labels=False, include_lowest=True).to_numpy()
     n = np.bincount(codes, minlength=len(edges) - 1).astype(float)
     bad = np.bincount(codes, weights=target, minlength=len(edges) - 1)
-    keep = n > 0
-    uppers = edges[1:][keep]
-    n, bad = n[keep], bad[keep]
+    not_empty = n > 0
+    uppers = edges[1:][not_empty]
+    n = n[not_empty]
+    bad = bad[not_empty]
 
+    # Step 2: the direction. A positive trend means the default rate rises with the value.
+    # This is the weighted covariance between the bin position and the default rate.
     rate = bad / n
-    idx = np.arange(len(n))
-    trend = np.sum(n * (idx - np.average(idx, weights=n)) * (rate - np.average(rate, weights=n)))
-    direction = 1.0 if trend >= 0 else -1.0
+    position = np.arange(len(n))
+    mean_position = np.average(position, weights=n)
+    mean_rate = np.average(rate, weights=n)
+    trend = np.sum(n * (position - mean_position) * (rate - mean_rate))
+    if trend >= 0:
+        direction = 1.0
+    else:
+        direction = -1.0
 
-    blocks = []  # each block: [count, defaults, upper edge]
+    # Step 3: pool adjacent bins that go against the direction.
+    # Each block is [count, defaults, upper edge].
+    blocks = []
     for count, defaults, upper in zip(n, bad, uppers):
         blocks.append([count, defaults, upper])
-        while len(blocks) >= 2 and direction * (blocks[-2][1] / blocks[-2][0] - blocks[-1][1] / blocks[-1][0]) > 0:
-            last = blocks.pop()
-            blocks[-1] = [blocks[-1][0] + last[0], blocks[-1][1] + last[1], last[2]]
-    merged = np.array([-np.inf] + [b[2] for b in blocks[:-1]] + [np.inf], dtype=float)
-    return merged
+
+        # Keep merging the last block into the one before it while the rate still moves the wrong way.
+        while len(blocks) >= 2:
+            previous = blocks[-2]
+            last = blocks[-1]
+            previous_rate = previous[1] / previous[0]
+            last_rate = last[1] / last[0]
+            if direction * (previous_rate - last_rate) > 0:
+                blocks.pop()
+                merged_block = [previous[0] + last[0], previous[1] + last[1], last[2]]
+                blocks[-1] = merged_block
+            else:
+                break
+
+    # Every block except the last ends at an inner edge; the outer edges are open.
+    inner_edges = []
+    for block in blocks[:-1]:
+        inner_edges.append(block[2])
+    return np.array([-np.inf] + inner_edges + [np.inf], dtype=float)
 
 
 def apply_continuous_bins(x: pd.Series, edges: np.ndarray) -> pd.Series:

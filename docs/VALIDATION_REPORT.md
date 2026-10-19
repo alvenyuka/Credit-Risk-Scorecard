@@ -133,7 +133,7 @@ and 70% approval.
 
 ## 9. Tests that reproduce this report
 
-`python -m pytest` runs 69 tests in CI, with no data needed. The ones that carry the claims above:
+`python -m pytest` runs 71 tests in CI, with no data needed. The ones that carry the claims above:
 
 | Claim | Test file |
 |---|---|
