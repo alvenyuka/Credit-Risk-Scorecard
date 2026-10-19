@@ -1847,7 +1847,9 @@ def clean(value):
     return str(value).replace("|", "\\\\|")
 
 
-X    lines = []
+def markdown_table(df):
+    # A plain markdown table
+    lines = []
     header = [clean(name) for name in df.columns]
     lines.append("| " + " | ".join(header) + " |")
     lines.append("| " + " | ".join(["---"] * len(header)) + " |")
