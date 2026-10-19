@@ -1,235 +1,169 @@
 # Credit Risk Scorecard
 
-A reason for every decline, and 47% fewer credit losses at an 80% approval rate.
-
-| At a glance | |
-|---|---|
-| **Who decides** | A consumer lender's credit team, approving or declining each application. |
-| **Result** | Approving the top 80% cuts credit losses 47%; AUC 0.754 on 61,503 held-out applicants. |
-| **Proof** | 307,511 applications across 8 tables, 69 tests in CI, and a from-scratch logistic regression that matches scikit-learn. |
+A points-based score that tells a lender which loan applicants are likely to default, and gives a reason for every decline, built on 307,511 Home Credit applications.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)](#how-to-run)
 [![tests](https://github.com/alvenyuka/Credit-Risk-Scorecard/actions/workflows/ci.yml/badge.svg)](https://github.com/alvenyuka/Credit-Risk-Scorecard/actions/workflows/ci.yml)
 
-**Live case study:** [credit-risk-alven.vercel.app](https://credit-risk-alven.vercel.app), an approval-policy
-explorer, decile chart, calibration table, reason-code example and points table, all rendered from the executed
-outputs in `outputs/` (see `demo/README.md`).
+![Default rate by score decile: 26.4% in the lowest-scoring tenth of applicants, falling to 1.3% in the highest-scoring tenth](figures/default_rate_by_band.png)
 
-![Default rate by score decile, falling from 26.4% in the lowest band to 1.3% in the highest](figures/default_rate_by_band.png)
+## What this project does
 
-## The problem
+A lender approves or declines each loan application. Approving someone who later defaults costs a large part of the amount lent. Declining someone who would have repaid costs the profit on a good loan. In many countries a declined applicant is also owed a reason, which a black-box model cannot give line by line.
 
-A consumer lender approves or declines each application. Approving a borrower who defaults costs the amount
-lent times the loss given default; declining a borrower who would have repaid costs the margin on a good loan.
-Under fair-lending rules the lender also owes every declined applicant a reason, which a black-box model cannot
-give line by line. The question: **how much credit loss can a fully explainable scorecard remove, and what does
-its readability cost against a stronger black-box model?**
+A scorecard handles this by giving each applicant points for each answer on the application, such as the external credit score band or the education level, and adding them up. A low total means higher risk, and the points show where the applicant lost ground. The question here is how many credit losses such a fully explainable score can remove, and what that readability costs compared with a stronger black-box model.
 
-## How it works
-
-```mermaid
-flowchart LR
-    A[8 Home Credit tables] --> B[62 candidate characteristics]
-    B --> C[IV >= 0.01: 53]
-    C --> D[Correlation gate: 47]
-    D --> E[Sign gate: 32 kept]
-    E --> F[Logistic regression, from scratch]
-    F --> G[Points: 600 at 20:1 odds, 40 PDO]
-    G --> H[Score, reason codes, approval cut-off]
-```
-
-1. **Data and sample.** Application ratios (credit to income, annuity to income, credit term) and applicant-level
-   aggregates of bureau history, previous applications, instalments and card balances. A random 20% holdout
-   (61,503 applicants, stratified) is kept back and never used in fitting.
-2. **Characteristic analysis.** Numeric characteristics start from decile bins and are coarse-classed:
-   neighbouring bins merge until the default rate moves in one direction, with a separate bin for zero in
-   mostly-zero columns. Categoricals are binned by level. Each bin is replaced by its Weight of Evidence, smoothed
-   for sparse bins.
-3. **Variable selection.** Three gates a reviewer can check: information value below 0.01 is dropped; of any pair
-   of WoE columns correlated above 0.9 the higher-IV one is kept; any characteristic whose coefficient takes the
-   wrong sign once the others are in the model is removed and the model refitted.
-4. **Model fit.** A class-balanced logistic regression fitted by gradient descent on standardised WoE values.
-   WoE, IV, the solver and the AUC, KS, GINI and PSI metrics are implemented in `src/` and tested against
-   scikit-learn and scipy; predictions correlate with scikit-learn's fit at 0.999999.
-5. **Scaling.** The intercept is shifted from the 50/50 prior of the balanced fit back to the training default
-   rate, then coefficients become points: 600 points at 20:1 good-to-bad odds, 40 points to double the odds.
-6. **Use.** Each applicant gets a score, the reason codes for a decline, and a place against the approval
-   cut-off; the live case study renders the same outputs.
-
-## Stack
-
-| Layer | Tool | Version |
-|---|---|---|
-| Language | Python | 3.13.9 for the published run; CI on 3.11 and 3.13 |
-| Data | pandas, NumPy, pyarrow | 3.0.3, 2.4.6, 24.0.0 |
-| Statistics and model | own WoE, IV, logistic regression and metrics in `src/`; scikit-learn and scipy as test references | 1.8.0, 1.17.1 |
-| Benchmark | LightGBM (challenger only) | unpinned |
-| Charts | matplotlib | 3.9.2 |
-| Tests and CI | pytest, GitHub Actions | 8.3.3 |
-| Case study | static page on Vercel, data embedded from `outputs/` | |
-
-Versions are recorded in `outputs/results.json` (run of 2026-10-06, commit `75ef602`).
+Data: the Home Credit Default Risk dataset from Kaggle, 307,511 applications with a known outcome (8.1% defaulted) across 8 linked tables. It is the actual dataset, not synthetic data.
 
 ## Results
 
-A points-based credit scorecard that tells a lender which applicants are likely to default and gives a specific reason for every decline. Built on 307,511 Home Credit applications across 8 linked tables, it narrows 62 candidate characteristics to 32 and scores 61,503 held-out applicants at AUC 0.754; approving only the top 80% would have cut credit losses by 47%. Every figure on this page is written by the pipeline and checked by 69 tests in CI. The model is reviewed the way a bank's validation team would review it, findings
-included, in [`docs/VALIDATION_REPORT.md`](docs/VALIDATION_REPORT.md).
+All figures are measured on a random 20% of applicants (61,503) that was held back and never used to fit the model. Sources: `outputs/results.json`, `outputs/business_impact.json`, `outputs/challengers.json`.
 
-- 307,511 applicants with a known outcome, 8.1% of whom defaulted, from the application and seven linked tables.
-- 62 candidate characteristics, 32 kept after the three gates; 27 of 27 numeric characteristics monotonic.
-- 61,503 held-out applicants scored once.
-- 69 tests pass in CI, with no data needed.
+- **The score ranks risk well.** AUC 0.754: pick one applicant who defaulted and one who repaid at random, and the score puts the defaulter lower about 75% of the time (95% bootstrap interval 0.747 to 0.761: the range the AUC falls in 95% of the time when the holdout is resampled repeatedly).
+- **Defaults concentrate at the bottom.** The lowest-scoring tenth of applicants defaulted 26.4% of the time, the highest-scoring tenth 1.3%.
+- **Approving only the top 80% cuts credit losses by 47%.** That costs turning away 17.2% of the borrowers who would have repaid.
+- **The score doubles as a probability.** Predicted and observed default rates agree within 0.4 percentage points in every tenth of applicants.
+- **Readability has a price.** LightGBM, a black-box model, reaches AUC 0.781 on the same applicants, 0.027 above the scorecard (step 11 explains the second baseline, 0.022).
 
-| Metric (61,503 held-out applicants) | Value |
-|---|---:|
-| AUC (95% bootstrap interval) | **0.754** (0.747 to 0.761) |
-| KS | **0.381** |
-| GINI | 0.508 |
-| Default rate, lowest vs highest score decile | 26.4% vs 1.3% |
-| Mean score, repaid vs defaulted (observed range 389 to 787) | 594 vs 542 |
-| Good-to-bad odds at 600: scorecard vs observed (scores 580 to 620) | 20.0 vs 20.2 |
-| Largest gap, predicted vs observed default rate (by decile) | 0.4 points |
-| Score stability, training vs holdout (PSI) | 0.0002 |
+Try it: the [live case study](https://credit-risk-alven.vercel.app) has an approval-policy explorer and a "Score an applicant" calculator that adds up the points for all 32 characteristics. It reads the same output files as this README (see `demo/README.md`).
 
-Calibration holds: after the intercept correction, predicted and observed default rates agree within 0.4
-percentage points in every decile, so the score can be read as a probability of default.
+| Measure (holdout of 61,503) | Value | What it means |
+|---|---:|---|
+| AUC | 0.754 | Described above. 0.5 is a coin flip, 1.0 is perfect. |
+| KS | 0.381 | The widest gap between the share of defaulters and the share of repayers scoring below the same cut-off. |
+| Gini | 0.508 | AUC rescaled to run from 0 to 1 (2 x AUC - 1). |
+| Mean score, repaid vs defaulted | 594 vs 542 | Scores run from 389 to 787 on the holdout. |
+| Good-to-bad odds near 600 points | 20.2 observed, 20.0 designed | Applicants scoring 580 to 620 repaid about 20 for every 1 who defaulted, as the scale intends. |
+| Score stability, training vs holdout (PSI) | 0.0002 | Population Stability Index: how far the score distribution moved between two groups. Under 0.1 is usually read as stable. |
 
-### How a decline is explained
+Money table, produced by `src/business_impact.py` into `outputs/business_impact.json`. Credit loss is the credit amount of each approved loan that defaulted, times a loss given default (the share of the amount lost when a borrower defaults) of 45%, the value set by the Basel bank-capital rules (foundation internal-ratings-based approach) for senior unsecured lending. Home Credit does not state its currency, so amounts are in its own units.
 
-Every characteristic gives a fixed number of points per bin, so a decline is explained by the characteristics
-on which the applicant lost the most points against the best possible answer. A characteristic on which the
-applicant already scored the maximum is never given as a reason. For a defaulted holdout applicant who scored
-530, below the 541 cut-off of the 80% policy: *external bureau score 3, 58.1 points below the best band;
-education level, 43.1 points below the best; average external bureau score, 27.5 points below the best.* The
-points for every bin are in [`outputs/scorecard_points.json`](outputs/scorecard_points.json).
-
-## Business impact
-
-On the holdout, approve only the highest-scoring share of applicants. Credit loss is the credit amount of each
-approved loan that defaulted, times a loss given default of 45% (the Basel foundation-IRB value for senior
-unsecured lending). Home Credit does not state its currency, so amounts are in the dataset's units. Produced by
-`src/business_impact.py` into `outputs/business_impact.json`.
-
-| Policy | Approved | Default rate | Credit loss | Loss avoided | Good borrowers declined |
+| Policy | Approved | Default rate among approved | Credit loss | Loss avoided | Good borrowers declined |
 |---|---:|---:|---:|---:|---:|
-| Approve everyone | 61,503 | 8.1% | 1.25 bn | n/a | 0 |
-| Approve top 90% (score ≥ 514) | 55,353 | 6.0% | 0.89 bn | 29% | 8.0% |
-| Approve top 80% (score ≥ 541) | 49,202 | 4.9% | 0.66 bn | **47%** | 17.2% |
-| Approve top 70% (score ≥ 560) | 43,052 | 4.1% | 0.50 bn | 60% | 27.0% |
+| Approve everyone | 61,503 | 8.1% | 1.25 bn | n/a | 0% |
+| Approve top 90% (score 514.2 or more) | 55,353 | 6.0% | 0.89 bn | 29% | 8.0% |
+| Approve top 80% (score 540.6 or more) | 49,202 | 4.9% | 0.66 bn | 47% | 17.2% |
+| Approve top 70% (score 560.3 or more) | 43,052 | 4.1% | 0.50 bn | 60% | 27.0% |
 
-At a 90% approval rate the scorecard removes 29% of credit losses while turning away about one good borrower in
-twelve. Where to set the cut-off depends on the margin earned on a good loan against the loss on a bad one,
-which this table lets a credit committee price directly.
-
-## Charts
+Where to set the cut-off depends on the profit on a good loan against the loss on a bad one, which this table lets a credit committee price.
 
 ![Credit loss on the holdout by approval policy, falling from 1.25 billion when approving everyone to 0.50 billion at a 70% approval rate](figures/lending_policy.png)
 
-*Loss falls fastest between approving everyone and approving 80%; past that, each step declines more good
-borrowers for less loss removed.*
+*Loss falls fastest between approving everyone and approving 80%. After that each step declines more good borrowers for less loss removed.*
 
-![Score distributions for repaid and defaulted applicants, means 594.3 and 541.6](figures/score_distribution.png)
+## How I built it
 
-*Repaid and defaulted applicants overlap, as they do in any real book, but their mean scores sit 52 points apart.*
+The order below is the order the work was done: start simple, add one idea at a time. The week-by-week record, mistakes included, is in [`notes/`](notes/README.md).
 
-![Top 15 of 32 selected features by information value, led by EXT_SOURCE_MEAN at 0.61](figures/iv_top15.png)
+1. **Look at the data.** `src/io_raw.py` loads the application table. Only 8.1% of applicants defaulted, so plain accuracy would mislead (approving everyone is 91.9% "accurate"). I judge models by AUC instead. One field, `DAYS_EMPLOYED`, holds 365,243 days (about 1,000 years) for pensioners and unemployed applicants. I found it in the raw summary statistics and set it to missing (`src/baseline_features.py`).
 
-*External bureau scores dominate. The average of the three (IV 0.61) was checked for leakage and kept, because
-all three scores exist when the application is made. Bureau credit age, the share of active bureau credit and
-the share of previous applications refused also rank in the top 15.*
+   ![Bar chart of 282,686 repaid and 24,825 defaulted applications, 91.9% and 8.1%](figs/target_balance.png)
+
+   *Defaults are rare, which is why accuracy is not the measure.*
+
+2. **A simple baseline.** `src/baseline_model.py` fits an ordinary logistic regression (a model that turns weighted inputs into a probability) on the application table only. My build log records AUC 0.7487 for it (`notes/week6_log.md`, from the August 2026 build, not regenerated since). Every later step has to beat this.
+
+3. **Bin each characteristic and replace it with Weight of Evidence.** Weight of Evidence (WoE) compares, for one group of applicants (a bin), the share of all repayers who fall in it with the share of all defaulters who fall in it, on a log scale. Positive means safer than average, negative means riskier. Numeric characteristics are first cut into ten bins of equal size, text characteristics get one bin per level, and missing values get their own bin because "no bureau record" can carry information. Code: `src/woe_iv.py`.
+
+   ![Weight of Evidence by bin of the external bureau score average: negative for low scores, rising to positive for high scores](figs/woe_ext_source_mean.png)
+
+   *Low external score bins are riskier than average (red), high ones safer (blue).*
+
+4. **Coarse classing.** Equal-size bins can zig-zag: a safer bin ends up with a riskier WoE than its neighbour, and then earns fewer points. Coarse classing merges neighbouring bins until the default rate moves in one direction only. Code: `fit_monotone_bins` in `src/woe_iv.py`.
+
+   ![Two panels of Weight of Evidence for average bureau credit age, before merging (ten bins) and after coarse classing](figs/coarse_classing.png)
+
+   *The merged version keeps the same downward shape with fewer bins.*
+
+5. **Add history from the other seven tables.** `src/relational_features.py` rolls bureau records, previous applications, instalments and card balances up to one row per applicant. With the application fields that gives 62 candidate characteristics.
+
+6. **Three gates cut 62 characteristics to 32.** Each gate is a rule a reviewer can check. Code: `src/fit_model.py`, called by `src/run_pipeline.py`.
+   - **Information value gate.** Information Value (IV) sums, over all bins, how far the repayer and defaulter distributions differ. Below 0.01 means the characteristic barely separates the two groups. This leaves 53.
+   - **Correlation gate.** Of any two characteristics correlated above 0.9 (they say the same thing), keep the one with the higher IV. This leaves 47.
+   - **Sign gate.** In a scorecard every characteristic should give more points to its safer bins. A positive model coefficient on WoE does the reverse. Any characteristic that turns positive is removed and the model refitted. This leaves 32, and every remaining coefficient is negative.
+
+   Sex and marital status are left out of the candidates altogether because they are prohibited bases for credit decisions under the US Equal Credit Opportunity Act. A test fails if either is reintroduced. Adding both back would raise AUC only from 0.7540 to 0.7553 (`prohibited_basis_ablation` in `results.json`).
+
+7. **Logistic regression written from scratch.** `src/from_scratch_lr.py` fits the model by gradient descent (repeated small steps downhill on the error). On the final model its predictions correlate with scikit-learn's at 0.999999 and the largest coefficient difference is 0.0023 (`results.json`). The AUC, KS, Gini and PSI functions in `src/metrics_scratch.py` are checked against scikit-learn and scipy in `tests/`.
+
+8. **Turn the model into points.** `src/scorecard.py` rescales the model so that 600 points means good-to-bad odds of 20 to 1, and every 40 points doubles the odds ("points to double the odds", PDO). Each bin of each characteristic then carries a fixed number of points. The full table is `outputs/scorecard_points.json`.
+
+   ![Points awarded by bin for the three strongest characteristics: the lowest bins lose points, the highest gain points](figs/points_by_bin.png)
+
+   *Each bar is what an applicant gains or loses for landing in that bin.*
+
+9. **Validate on the held-back 20%.** The holdout is scored once. `src/run_pipeline.py` writes every figure in Results to `outputs/results.json`. Calibration is checked by sorting applicants into ten equal groups and comparing predicted with observed default rates.
+
+   ![ROC curve with AUC 0.754 on the left, and on the right the two cumulative score distributions whose largest gap is KS 0.381 at 571 points](figs/roc_and_ks.png)
+
+   *The further the ROC curve bows above the diagonal, the better the ranking. On the right, the largest gap between the two lines is the KS.*
+
+   ![Predicted against observed default rate for ten groups, points sitting close to the diagonal](figs/calibration.png)
+
+   *Points on the diagonal mean the score can be read as a probability.*
+
+10. **Reason codes and an approval policy.** For a decline, the reasons are the characteristics where the applicant lost the most points against the best possible bin. A characteristic already at its maximum is never given as a reason. For a defaulted holdout applicant who scored 530, below the 540.6 cut-off of the 80% policy, the top reasons were `EXT_SOURCE_3` (58.1 points below the best bin), `NAME_EDUCATION_TYPE` (43.1) and `EXT_SOURCE_MEAN` (27.5). `src/business_impact.py` produces the money table above.
+
+11. **Benchmark against a black-box model.** `src/challengers.py` fits LightGBM on the same 62 candidates. It also settled the coarse-classing choice under a rule fixed beforehand: adopt it if it costs no more than 0.005 AUC on a validation slice of the development data. It cost 0.0029, so I adopted it. On the holdout, the scorecard with equal-size bins scored AUC 0.7585 and the adopted coarse-classed scorecard 0.7540. LightGBM reached 0.7808. The gap to the published scorecard is therefore 0.027, and the gap to the equal-size-bin scorecard is 0.022, the figure stored as `interpretability_price_holdout_auc` in `outputs/challengers.json`.
+
+## Problems I hit
+
+- **A KS bug under tied scores.** My first KS code was off by about 0.0016 when many applicants shared a score, because it read the gap in the middle of a block of ties. I found it by checking against `scipy.stats.ks_2samp`. The fix computes one row per distinct score first, and it now matches scipy exactly (`notes/week7_log.md`).
+- **Comparing two different models.** My from-scratch regression looked like it disagreed with scikit-learn. Scikit-learn used balanced class weights and mine did not, so they were solving different problems. After adding the weighting, predictions correlated at 0.999997 instead of 0.905 in that build (build log; the final model's figure is 0.999999) (`notes/week8_log.md`, `notes/week9_log.md`).
+- **Characteristics that gave points to riskier bins.** A flag for the 365,243-day placeholder and the missing bin of years employed describe the same pensioners. Fitted together they got opposite signs, and a lower-risk group showed up as a reason for decline. I noticed it from that reason code, dropped the flag, and added the sign gate: 15 characteristics, including age, the credit amount and the number of bureau records, took a positive coefficient once correlated characteristics were in the model and are now removed. A check that every coefficient is negative runs on every build (commit `9efc5ec`, `sign_gate_removed` in `results.json`).
+- **Zig-zagging bins.** The per-characteristic monotonicity check showed that, with equal-size bins, only 14 of 31 numeric characteristics on the validation slice had points moving one way, which a chart of a real characteristic confirmed. After coarse classing, all 27 numeric characteristics in the final model do (`outputs/challengers.json`, commit `1178122`).
+- **600 points did not mean 20 to 1.** The week 9 review of my own scale found that I had assumed 20 to 1 at 600 points while the population's odds were about 11.4 to 1 (`notes/week9_log.md`). A model fitted with balanced class weights is centred on a 50/50 mix of repayers and defaulters, not the actual 8.1%. I moved the intercept (the model's starting level) from -0.0054 to -2.4379 so the scale means what it says. Odds near 600 points are then 20.2 to 1 observed against 20.0 designed (`results.json`, commit `9efc5ec`).
 
 ## Data
 
-| Source | Link | Terms | Size | Period | Refresh |
-|---|---|---|---:|---|---|
-| Home Credit Default Risk | [Kaggle](https://www.kaggle.com/competitions/home-credit-default-risk) | Kaggle competition rules | 307,511 applicants, 8 CSV tables | undated (no application dates) | static |
+| Source | Terms | Size | Dates |
+|---|---|---|---|
+| [Home Credit Default Risk](https://www.kaggle.com/competitions/home-credit-default-risk) (Kaggle) | Kaggle competition rules | 307,511 applicants with a known outcome, 8 CSV tables | Undated: the data has no application dates |
 
-The application table plus seven linked tables: credit-bureau records, previous applications, instalments and
-card balances. The CSVs are not committed; place them in `data/`.
-
-## Key design decisions
-
-- **Coarse classing over ten equal bins.** With equal bins only 11 of 32 numeric characteristics had points
-  moving one way, so a safer bin could earn fewer points than a riskier neighbour. `src/challengers.py` compared
-  both on the development applicants under a rule fixed beforehand: adopt coarse classing if it costs no more
-  than 0.005 AUC on a validation slice. It cost 0.003 and was adopted. On the holdout the published AUC moved
-  from 0.759 to 0.754, calibration tightened, and the loss avoided at 80% approval rose from 46% to 47%.
-- **A scorecard over LightGBM.** LightGBM on the same 62 candidates reaches a holdout AUC of 0.781, 0.027 above
-  the scorecard. That is the recorded price of a model whose every point has a reason
-  ([`outputs/challengers.json`](outputs/challengers.json)); LightGBM stays a benchmark.
-- **A sign gate instead of keeping every predictive characteristic.** Fifteen characteristics, among them age,
-  the number of bureau records and previous applications, and the credit amount, took the opposite sign once
-  correlated characteristics were in the model. Left in, they would have given points to riskier bins; after the
-  gate every remaining coefficient is negative.
-- **The pensioner placeholder read as missing.** `DAYS_EMPLOYED` holds 365,243 days for pensioners and the
-  unemployed. It is set to missing, so that group is read through the `Missing` bin of years employed and
-  receives positive points, in line with its lower default rate.
-- **Fair-lending exclusions, tested.** Sex (`CODE_GENDER`) and marital status (`NAME_FAMILY_STATUS`) are
-  prohibited bases under the US Equal Credit Opportunity Act and Regulation B; a test fails if either is
-  reintroduced. Adding both back would move AUC from 0.7540 to 0.7553 only. Age is removed by the sign gate, so
-  no applicant aged 62 or over receives negative points, and an acceptance check runs on every build.
+The CSVs are not committed. Download them from Kaggle into `data/`. Figures here are on a random 20% holdout of the training file, not the Kaggle test set, so they are not leaderboard scores.
 
 ## Limits
 
-- **Random, not out-of-time, validation.** The dataset has no application dates, so a forward time split cannot
-  be built and calibration on a later population is untested.
-- **Loss side only.** The policy table applies one 45% LGD and does not model interest earned on good loans.
-- **PD only.** A full IFRS 9 provision also needs loss-given-default and exposure-at-default models.
-- **Selection, not volume, carries the result.** 32 characteristics reach AUC 0.754 against 0.751 for an
-  earlier 400-candidate version of this pipeline (its README at commit `a8708a0~1`).
-
-## Project structure
-
-```
-src/                          features, WoE/IV, logistic regression, metrics, scorecard and checks,
-                              run_pipeline.py (the release run), figures, business_impact.py, challengers.py
-tests/                        69 tests: statistics vs scikit-learn and scipy, binning, scorecard arithmetic,
-                              screening gates, fair-lending checks, policy arithmetic
-outputs/                      results.json, business_impact.json, scorecard_points.json, challengers.json,
-                              notebook_run.json (date, runtime and versions of the stored notebook run)
-figures/                      charts drawn from the same model
-figs/                         charts drawn by the notebook (plus four left over from an earlier pipeline's demo)
-output/                       demo data left over from that earlier pipeline; the live page reads outputs/
-demo/                         the live case-study page and how to redeploy it
-Credit_Risk_Scorecard.ipynb   the analysis in four parts, executed end to end
-build_notebook.py             generates the notebook (edit this, not the .ipynb)
-docs/METHODOLOGY.md           full method, results and test descriptions
-docs/VALIDATION_REPORT.md     model validation: soundness, discrimination, calibration, benchmarks, findings
-notes/                        the week-by-week build log, mistakes and corrections included
-```
-
-The notebook builds the scorecard step by step: what the data can support, building the scorecard, validation
-and use, and limits with a decision log of 12 modelling choices. It asserts that its build equals the tested
-pipeline and that every figure equals `outputs/results.json`. The full method and tests are in
-[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md), and the blind rebuild behind the scorecard, two bugs included, is in
-[`notes/`](notes/README.md).
+- **Random, not time-based, validation.** There are no application dates, so I could not test on a later period. Behaviour on a future population, and whether the score drifts, is untested.
+- **Cut-offs are set on the same holdout.** The score cut-offs in the money table come from the holdout that also measures the loss avoided.
+- **Loss side only.** The money table uses one flat 45% loss given default and ignores interest earned on good loans.
+- **Probability of default only.** A full provision under IFRS 9 also needs models for loss given default and exposure at default.
+- **Unstated currency.** Amounts are in Home Credit's own units.
+- **Older build-log figures.** AUC 0.7487 in step 2 and the 0.905 correlation in Problems come from the August 2026 build logs and were not regenerated.
 
 ## How to run
 
 ```bash
-pip install -r requirements.txt    # pinned to the versions in outputs/results.json
-python -m pytest                   # 69 tests, no data needed
-# put the 8 Home Credit Default Risk CSVs from Kaggle in data/
-python src/run_pipeline.py         # one fit: score, check and write outputs/ (15 to 20 minutes the first time)
-python src/make_figures.py         # score distribution and default rate by band (seconds)
-python src/business_impact.py      # approval-policy table, lending-policy and IV charts (seconds)
-python src/challengers.py          # coarse classing and LightGBM against the decile scorecard (about 15 minutes)
+pip install -r requirements.txt   # numpy, pandas, scikit-learn, scipy, matplotlib, pyarrow, pytest, notebook tools
+pip install lightgbm              # optional: only src/challengers.py needs it, and it is not in requirements.txt
+python -m pytest                  # 69 tests, no data needed
+# put the 8 Home Credit CSVs in data/
+python src/run_pipeline.py        # fit, score, validate, write outputs/ (15 to 20 minutes the first time)
+python src/make_figures.py        # score distribution and default rate by band
+python src/business_impact.py     # money table and policy charts
+python src/challengers.py         # coarse classing and LightGBM comparison (about 15 minutes)
 ```
 
-## Skills demonstrated
+The notebook `Credit_Risk_Scorecard.ipynb` walks through the same build and checks its figures against `outputs/results.json`. Edit `build_notebook.py`, not the notebook. Figures here come from the run of 2026-10-06 (commit `75ef602`).
 
-- Weight of Evidence binning, coarse classing and Information Value screening, coded by hand: `src/`
-- Logistic regression by gradient descent, verified against scikit-learn: `src/`, `tests/`
-- Scorecard scaling, prior correction and reason codes: `outputs/scorecard_points.json`
-- Validation with AUC, KS, GINI, bootstrap intervals, decile calibration and PSI: `outputs/results.json`
-- An approval policy priced in expected loss with a stated LGD: `src/business_impact.py`
-- Champion-challenger testing under a rule fixed in advance: `src/challengers.py`
-- Fair-lending controls enforced as tests: `tests/`
-- Reproducible delivery: pinned requirements, CI on two Python versions, a live case study built from the outputs
+## Project structure
+
+```
+src/                         features, WoE and IV, logistic regression, metrics, scorecard, pipeline
+tests/                       69 tests: statistics against scikit-learn and scipy, binning, scoring, gates, fair lending
+outputs/                     results.json, business_impact.json, challengers.json, scorecard_points.json, notebook_run.json
+figures/                     charts drawn by the scripts (headline, policy loss, score distribution, top IV)
+figs/                        charts drawn by the notebook
+demo/                        the live case-study page and how to redeploy it
+docs/METHODOLOGY.md          full method
+docs/VALIDATION_REPORT.md    review of the model as a bank validation team would do it
+notes/                       week-by-week build log, mistakes included
+build_notebook.py            generates Credit_Risk_Scorecard.ipynb
+```
 
 ## License
 
-MIT. See [`LICENSE`](LICENSE). Data: [Home Credit Default Risk](https://www.kaggle.com/competitions/home-credit-default-risk) (Kaggle).
+MIT. See [LICENSE](LICENSE). Data: [Home Credit Default Risk](https://www.kaggle.com/competitions/home-credit-default-risk) (Kaggle).
 
 Alven Yuka · [LinkedIn](https://www.linkedin.com/in/alven-yuka-610b78174/) · [Email](mailto:alvenyuka2@gmail.com)
