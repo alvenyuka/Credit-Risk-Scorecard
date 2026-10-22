@@ -138,7 +138,7 @@ The CSVs are not committed. Download them from Kaggle into `data/`. Figures here
 ```bash
 pip install -r requirements.txt   # numpy, pandas, scikit-learn, scipy, matplotlib, pyarrow, pytest, notebook tools
 pip install lightgbm              # optional: only src/challengers.py needs it, and it is not in requirements.txt
-python -m pytest                  # 71 tests, no data needed
+python -m pytest                  # 87 tests, no data needed
 # put application_train.csv and the six history CSVs in data/ (application_test.csv is not used)
 python src/run_pipeline.py        # fit, score, validate, write outputs/ (15 to 20 minutes the first time)
 python src/make_figures.py        # score distribution and default rate by band
@@ -152,7 +152,7 @@ The notebook `Credit_Risk_Scorecard.ipynb` walks through the same build and chec
 
 ```
 src/                         features, WoE and IV, logistic regression, metrics, scorecard, pipeline
-tests/                       71 tests: statistics against scikit-learn and scipy, binning, scoring, gates, fair lending
+tests/                       87 tests: statistics against scikit-learn and scipy, binning, scoring, gates, fair lending, README figures
 outputs/                     results.json, business_impact.json, challengers.json, scorecard_points.json, notebook_run.json
 figures/                     charts drawn by the scripts (headline, policy loss, score distribution, top IV)
 figs/                        charts drawn by the notebook
