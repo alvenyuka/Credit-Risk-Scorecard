@@ -94,7 +94,7 @@ md("""
 ---
 # Part 1: Prepare Data
 
-## 1.1 Import
+## 1A. Import
 
 Before any analysis: load the libraries, see the finished product in miniature, then read the main table and
 check its quality.
@@ -112,6 +112,7 @@ code("""
 import json
 import os
 import sys
+# time: the clock that measures how long the whole notebook takes
 import time
 
 # Charts
@@ -169,6 +170,7 @@ step("1.3", "Write the colour rule once",
      "A rule written once cannot drift: if the colours ever change, they change everywhere.")
 
 code("""
+# A helper for every WoE chart: one colour per bar
 def bar_colours(values):
     # Red for a negative value (riskier than average), blue for zero or above
     colours = []
@@ -216,6 +218,7 @@ from feature_lists import (
     CORRELATION_THRESHOLD,   # gate 2 in Step 2.18
 )
 
+# Print the type and size of what this step made
 print(type(MODEL_NUMERIC).__name__, "of", len(MODEL_NUMERIC), "numeric candidates;",
       len(MODEL_CATEGORICAL), "categorical candidates")
 print("prohibited bases:", PROHIBITED_BASES)
@@ -354,6 +357,7 @@ key_columns = ["TARGET", "AMT_INCOME_TOTAL", "AMT_CREDIT", "AMT_ANNUITY", "AMT_G
 is_application_row = dictionary["Table"].str.startswith("application")
 is_key_column = dictionary["Row"].isin(key_columns)
 key_descriptions = dictionary.loc[is_application_row & is_key_column, ["Row", "Description"]].set_index("Row")
+# Show long descriptions in full rather than cut off
 pd.set_option("display.max_colwidth", 120)
 print(type(key_descriptions).__name__, key_descriptions.shape)
 key_descriptions
@@ -383,6 +387,7 @@ missing = app.isna().mean().sort_values(ascending=False)
 n_with_gaps = int((missing > 0).sum())
 n_half_empty = int((missing > 0.5).sum())
 print(type(missing).__name__, len(missing))
+# Print the result
 print(f"columns with any missing value: {n_with_gaps} of {app.shape[1]}; more than half missing: {n_half_empty}")
 missing.head()
 """)
@@ -403,9 +408,11 @@ code("""
 fig, ax = plt.subplots(figsize=(9, 6))
 (missing.head(20) * 100).sort_values().plot(kind="barh", ax=ax, color=BLUE)
 ax.set_xlabel("Share of applications missing the value (%)")
+# Label the chart so each axis says what it shows
 ax.set_title("The 20 most incomplete columns")
 plt.tight_layout()
 plt.savefig("figs/missing_values.png", dpi=150, bbox_inches="tight")
+# Show the chart
 plt.show()
 """)
 
@@ -428,6 +435,7 @@ positive = app["DAYS_EMPLOYED"] > 0
 placeholder_values = app.loc[positive, "DAYS_EMPLOYED"].unique()
 print(type(positive).__name__, len(positive))
 print(f"applicants with DAYS_EMPLOYED > 0: {positive.sum():,}")
+# Print the result
 print("distinct values among them:", placeholder_values)
 """)
 
@@ -459,6 +467,7 @@ money_summary = app[money].describe().round(0)
 n_huge_income = int((app["AMT_INCOME_TOTAL"] > 1e7).sum())
 print(type(money_summary).__name__, money_summary.shape)
 print(f"applicants with an annual income above 10 million: {n_huge_income}, the largest {app['AMT_INCOME_TOTAL'].max():,.0f}")
+# Display the table
 money_summary
 """)
 
@@ -474,7 +483,7 @@ The median applicant earns 147,150 a year and borrows 513,531 (Home Credit does 
 applicants report an income above ten million, one of them 117 million: almost certainly data-entry errors, but
 they stay in for the reason given in the Concept line.
 
-## 1.2 Explore
+## 1B. Explore
 
 Six questions, each answered with a table or a chart and one sentence on what it shows.
 """)
@@ -492,6 +501,7 @@ outcome = app["TARGET"].value_counts().rename({0: "repaid", 1: "defaulted"})
 default_rate = app["TARGET"].mean()
 print(type(outcome).__name__, len(outcome))
 print(outcome.to_string())
+# Print the result
 print(f"default rate: {default_rate:.1%}")
 """)
 
@@ -508,9 +518,11 @@ outcome.plot(kind="bar", ax=ax, color=[BLUE, RED], rot=0)
 for bar_position in range(len(outcome)):
     count = outcome.iloc[bar_position]
     ax.text(bar_position, count, f"{count:,} ({count / len(app):.1%})", ha="center", va="bottom")
+# Label the chart so each axis says what it shows
 ax.set_ylabel("Applicants")
 ax.set_title("Outcome of the 307,511 applications")
 plt.tight_layout()
+# Fit the layout, save the chart to figs/ for the README, and show it
 plt.savefig("figs/target_balance.png", dpi=150, bbox_inches="tight")
 plt.show()
 """)
@@ -548,15 +560,19 @@ code("""
 fig, axes = plt.subplots(1, 2, figsize=(14, 4.5))
 axes[0].hist(age[app["TARGET"] == 0], bins=25, density=True, alpha=0.6, color=BLUE, label="repaid")
 axes[0].hist(age[app["TARGET"] == 1], bins=25, density=True, alpha=0.6, color=RED, label="defaulted")
+# Label the chart so each axis says what it shows
 axes[0].set_xlabel("Age at application (years)")
 axes[0].set_ylabel("Density")
 axes[0].set_title("Age distribution by outcome")
+# Label the chart so each axis says what it shows
 axes[0].legend()
 (by_age["default_rate"] * 100).plot(kind="bar", ax=axes[1], color=RED, rot=45)
 axes[1].axhline(app["TARGET"].mean() * 100, color=INK, ls="--", lw=1)
+# Label the chart so each axis says what it shows
 axes[1].set_xlabel("Age band")
 axes[1].set_ylabel("Default rate (%)")
 axes[1].set_title("Default rate falls with age")
+# Fit the layout, save the chart to figs/ for the README, and show it
 plt.tight_layout()
 plt.savefig("figs/age_vs_default.png", dpi=150, bbox_inches="tight")
 plt.show()
@@ -586,6 +602,7 @@ for ax, col, title in [(axes[0], "AMT_INCOME_TOTAL", "Annual income"), (axes[1],
     ax.set_title(f"{title} by outcome")
     ax.legend()
 plt.tight_layout()
+# Fit the layout, save the chart to figs/ for the README, and show it
 plt.savefig("figs/income_credit_distribution.png", dpi=150, bbox_inches="tight")
 plt.show()
 """)
@@ -595,6 +612,7 @@ code("""
 income_decile = pd.qcut(app["AMT_INCOME_TOTAL"], 10, duplicates="drop")
 by_income = app.groupby(income_decile, observed=True)["TARGET"].agg(applicants="size", default_rate="mean").round(4)
 print(type(by_income).__name__, by_income.shape)
+# Display the table
 by_income
 """)
 
@@ -622,6 +640,7 @@ credit_to_income = app["AMT_CREDIT"] / app["AMT_INCOME_TOTAL"]
 ratio_decile = pd.qcut(credit_to_income, 10)
 by_ratio = app.groupby(ratio_decile, observed=True)["TARGET"].agg(applicants="size", default_rate="mean")
 print(type(by_ratio).__name__, by_ratio.shape)
+# Display the table
 by_ratio.round(4)
 """)
 
@@ -638,12 +657,15 @@ ratio_labels = []
 for ratio_interval in by_ratio.index:
     ratio_labels.append(f"{ratio_interval.left:.1f} to {ratio_interval.right:.1f}")
 fig, ax = plt.subplots(figsize=(10, 4))
+# Draw the default rate of each group as a bar
 (by_ratio["default_rate"] * 100).plot(kind="bar", ax=ax, color=RED, rot=45)
 ax.set_xticklabels(ratio_labels)
 ax.set_xlabel("Credit amount as a multiple of annual income (deciles)")
+# Label the chart so each axis says what it shows
 ax.set_ylabel("Default rate (%)")
 ax.set_title("Default rate by credit-to-income ratio: a hump, not a line")
 plt.tight_layout()
+# Fit the layout, save the chart to figs/ for the README, and show it
 plt.savefig("figs/credit_to_income.png", dpi=150, bbox_inches="tight")
 plt.show()
 """)
@@ -661,6 +683,7 @@ step("1.17", "Compare default rates across applicant groups",
      "own bin.")
 
 code("""
+# A helper that draws the default rate of each level of one column
 def default_rate_by_group(col, ax, min_applicants=500):
     # Applicants and default rate for each level of one column
     table = app.groupby(col, observed=True)["TARGET"].agg(applicants="size", default_rate="mean")
@@ -679,11 +702,14 @@ def default_rate_by_group(col, ax, min_applicants=500):
 group_columns = ["NAME_INCOME_TYPE", "NAME_EDUCATION_TYPE", "NAME_HOUSING_TYPE", "OCCUPATION_TYPE"]
 group_tables = {}
 fig, axes = plt.subplots(2, 2, figsize=(15, 11))
+# One panel per column, keeping each table to read later
 for ax, col in zip(axes.ravel(), group_columns):
     group_tables[col] = default_rate_by_group(col, ax)
+# Fit the layout, save the chart to figs/ for the README, and show it
 plt.tight_layout()
 plt.savefig("figs/default_by_group.png", dpi=150, bbox_inches="tight")
 plt.show()
+# Print the type and size of what this step made
 print(type(group_tables["OCCUPATION_TYPE"]).__name__, group_tables["OCCUPATION_TYPE"].shape)
 """)
 
@@ -692,13 +718,15 @@ code("""
 occupation = group_tables["OCCUPATION_TYPE"]["default_rate"]
 assert occupation["Accountants"] < 0.05 and round(occupation["Low-skill Laborers"], 2) == 0.17
 income_type = group_tables["NAME_INCOME_TYPE"]["default_rate"]
+# Stop the run if this does not hold
 assert income_type["Pensioner"] < 0.06 and income_type["Working"] < 0.10
 """)
 
 md("""
 The dashed line is the overall rate. Pensioners and state servants default at about 5%, working applicants at
 nearly 10%. Education runs from about 5% with higher education to 11% with lower secondary. Renting or living with
-parents carries roughly 12% against 8% for home owners. Occupation spreads widest: accountants under 5%, low-skill
+parents carries roughly 12% against 8% for applicants living in a house or apartment (the `NAME_HOUSING_TYPE`
+label; it records the type of housing, not ownership, which is `FLAG_OWN_REALTY`). Occupation spreads widest: accountants under 5%, low-skill
 labourers 17%.
 """)
 
@@ -718,6 +746,7 @@ ext_missing = (app[ext_cols].isna().mean() * 100).round(1)
 ext_correlation = app[ext_cols].corrwith(app["TARGET"]).round(3)
 print(type(ext_missing).__name__, len(ext_missing))
 print("share missing:", ext_missing.to_dict())
+# Print the result
 print("correlation with default:", ext_correlation.to_dict())
 """)
 
@@ -737,6 +766,7 @@ for ax, col in zip(axes, ext_cols):
     ax.set_xlabel("Score (0 = riskiest, 1 = safest)")
     ax.legend()
 plt.tight_layout()
+# Fit the layout, save the chart to figs/ for the README, and show it
 plt.savefig("figs/external_scores.png", dpi=150, bbox_inches="tight")
 plt.show()
 """)
@@ -761,6 +791,7 @@ ext_mean = app[ext_cols].mean(axis=1)
 ext_band = pd.qcut(ext_mean, 10)
 by_ext = app.groupby(ext_band, observed=True)["TARGET"].agg(applicants="size", default_rate="mean")
 print(type(by_ext).__name__, by_ext.shape)
+# Display the table
 by_ext.round(4)
 """)
 
@@ -776,12 +807,15 @@ ext_labels = []
 for ext_interval in by_ext.index:
     ext_labels.append(f"{ext_interval.left:.2f} to {ext_interval.right:.2f}")
 fig, ax = plt.subplots(figsize=(10, 4))
+# Draw the default rate of each group as a bar
 (by_ext["default_rate"] * 100).plot(kind="bar", ax=ax, color=RED, rot=45)
 ax.set_xticklabels(ext_labels)
 ax.set_xlabel("Average external score (deciles)")
+# Label the chart so each axis says what it shows
 ax.set_ylabel("Default rate (%)")
 ax.set_title("Default rate by average external score")
 plt.tight_layout()
+# Fit the layout, save the chart to figs/ for the README, and show it
 plt.savefig("figs/ext_source_deciles.png", dpi=150, bbox_inches="tight")
 plt.show()
 """)
@@ -805,6 +839,7 @@ employed_years = -app["DAYS_EMPLOYED"].where(~positive, np.nan) / 365.25
 by_missing = app.groupby(employed_years.isna())["TARGET"].agg(applicants="size", default_rate="mean")
 by_missing = by_missing.rename(index={False: "employment length known", True: "missing (pensioners and unemployed)"})
 print(type(by_missing).__name__, by_missing.shape)
+# Display the table
 by_missing.round(4)
 """)
 
@@ -820,12 +855,15 @@ code("""
 employed_band = pd.cut(employed_years, [0, 1, 2, 3, 5, 10, 20, 50])
 by_employed = app.groupby(employed_band, observed=True)["TARGET"].agg(applicants="size", default_rate="mean")
 fig, ax = plt.subplots(figsize=(9, 4))
+# Draw the default rate of each group as a bar
 (by_employed["default_rate"] * 100).plot(kind="bar", ax=ax, color=RED, rot=0)
 ax.axhline(app["TARGET"].mean() * 100, color=INK, ls="--", lw=1)
 ax.set_xlabel("Years in current employment")
+# Label the chart so each axis says what it shows
 ax.set_ylabel("Default rate (%)")
 ax.set_title("Default rate by employment length (applicants with a known length)")
 plt.tight_layout()
+# Fit the layout, save the chart to figs/ for the README, and show it
 plt.savefig("figs/employment_length.png", dpi=150, bbox_inches="tight")
 plt.show()
 """)
@@ -864,9 +902,11 @@ code("""
 fig, ax = plt.subplots(figsize=(9, 6))
 extremes.plot(kind="barh", ax=ax, color=bar_colours(-extremes))
 ax.set_xlabel("Correlation with default (negative = safer as the value rises)")
+# Label the chart so each axis says what it shows
 ax.set_title("The ten most negative and ten most positive correlations with default")
 plt.tight_layout()
 plt.savefig("figs/correlation_with_default.png", dpi=150, bbox_inches="tight")
+# Show the chart
 plt.show()
 """)
 
@@ -875,7 +915,7 @@ The three external scores stand alone at about -0.16 to -0.18; nothing on the ap
 `DAYS_BIRTH` is the strongest form field (positive, because a larger value means younger). The application form is
 weak on its own, which is why the next steps add the applicant's credit history.
 
-## 1.3 Add the credit history
+## 1C. Add the credit history
 
 Home Credit supplies six more tables, each keyed by the applicant's `SK_ID_CURR` (or, for the monthly bureau
 statuses, by the bureau record):
@@ -966,6 +1006,7 @@ bureau_features = bureau.groupby("SK_ID_CURR").agg(
 ).reset_index()
 print(f"{len(bureau):,} bureau credits summarised for {len(bureau_features):,} applicants")
 print(type(bureau_features).__name__, bureau_features.shape)
+# Free the memory held by tables no longer needed
 del bureau, balance_summary
 """)
 
@@ -1002,6 +1043,7 @@ previous_features = previous.groupby("SK_ID_CURR").agg(
 ).reset_index()
 print(f"{len(previous):,} earlier applications summarised for {len(previous_features):,} applicants")
 print(type(previous_features).__name__, previous_features.shape)
+# Free the memory held by tables no longer needed
 del previous
 """)
 
@@ -1031,6 +1073,7 @@ pos_features = pos_cash.groupby("SK_ID_CURR").agg(
 print(f"{len(pos_cash):,} monthly records summarised for {len(pos_features):,} applicants; "
       f"{pos_late_share:.1%} of months had days past due")
 print(type(pos_features).__name__, pos_features.shape)
+# Free the memory held by tables no longer needed
 del pos_cash
 """)
 
@@ -1058,6 +1101,7 @@ card_features = cards.groupby("SK_ID_CURR").agg(
 ).reset_index()
 print(f"{len(cards):,} monthly card records summarised for {len(card_features):,} applicants")
 print(type(card_features).__name__, card_features.shape)
+# Free the memory held by tables no longer needed
 del cards
 """)
 
@@ -1095,6 +1139,7 @@ instalment_features = instalments.groupby("SK_ID_CURR").agg(
 print(f"{len(instalments):,} instalments summarised for {len(instalment_features):,} applicants; "
       f"{late_share:.1%} were paid late")
 print(type(instalment_features).__name__, instalment_features.shape)
+# Free the memory held by tables no longer needed
 del instalments
 """)
 
@@ -1115,6 +1160,7 @@ history = bureau_features
 for history_part in (previous_features, pos_features, card_features, instalment_features):
     history = history.merge(history_part, on="SK_ID_CURR", how="outer")
 print(type(history).__name__, history.shape)
+# Print the result
 print(f"history: {len(history):,} applicants x {history.shape[1] - 1} features")
 history.head()
 """)
@@ -1137,7 +1183,9 @@ code("""
 # The pipeline's tested, fingerprinted build of the same table
 from relational_features import load_relational_features
 
+# The pipeline's own history table, built by the tested function
 pipeline_history = load_relational_features(verbose=False)
+# Print the type and size of what this step made
 print(type(pipeline_history).__name__, pipeline_history.shape)
 """)
 
@@ -1146,6 +1194,7 @@ code("""
 history_sorted = history.sort_values("SK_ID_CURR").reset_index(drop=True)
 pipeline_sorted = pipeline_history.sort_values("SK_ID_CURR").reset_index(drop=True)
 pd.testing.assert_frame_equal(history_sorted, pipeline_sorted, check_dtype=False, check_like=True)
+# Free the memory held by tables no longer needed
 del pipeline_history, pipeline_sorted, history_sorted
 print("the plain-pandas history table equals the pipeline's")
 """)
@@ -1162,6 +1211,7 @@ for coverage_label, coverage_part in [("a bureau record", bureau_features), ("an
                                       ("a credit card", card_features), ("an instalment record", instalment_features)]:
     coverage[coverage_label] = app["SK_ID_CURR"].isin(coverage_part["SK_ID_CURR"]).mean()
 print(type(coverage).__name__, len(coverage))
+# One line per history table
 for coverage_label in coverage:
     print(f"applicants with {coverage_label}: {coverage[coverage_label]:.1%}")
 """)
@@ -1187,6 +1237,7 @@ refused_band = pd.cut(with_history["PREV_REFUSED_SHARE"], [-0.01, 0, 0.25, 0.5, 
 rate_by_bureau = with_history.groupby(bureau_band, observed=True)["TARGET"].mean()
 rate_by_refused = with_history.groupby(refused_band, observed=True)["TARGET"].mean()
 print(type(with_history).__name__, with_history.shape)
+# Print the result
 print("by bureau credits:", rate_by_bureau.round(3).to_dict())
 print("by refusal share:", rate_by_refused.round(3).to_dict())
 """)
@@ -1209,6 +1260,7 @@ for ax, band, title, xlabel in [(axes[0], bureau_band, "Default rate by number o
     ax.set_xlabel(xlabel)
     ax.set_ylabel("Default rate (%)")
 plt.tight_layout()
+# Fit the layout, save the chart to figs/ for the README, and show it
 plt.savefig("figs/history_vs_default.png", dpi=150, bbox_inches="tight")
 plt.show()
 """)
@@ -1218,7 +1270,7 @@ Applicants with no bureau record default at about 10%, those with a few credits 
 in itself. The refusal share is stronger still: applicants never refused before default at about 7%, those refused
 more than three times in four at over 15%.
 
-## 1.4 Build the candidate characteristics
+## 1D. Build the candidate characteristics
 
 The scorecard's inputs are built one at a time first, so you can see each change. Then the steps are folded into one
 `wrangle()` function, which is compared with the pipeline's tested version.
@@ -1305,6 +1357,7 @@ step("1.36", "Fold the steps into one `wrangle()` function",
      "new applicants, and the next step compares it with the pipeline's.")
 
 code("""
+# Every cleaning step from Part 1 in one function, so it can run on any copy of the table
 def wrangle(raw):
     # Work on a copy
     out = raw.copy()
@@ -1327,7 +1380,9 @@ def wrangle(raw):
     return out[keep]
 
 
+# Run it on the full application table
 feats = wrangle(app)
+# Free the memory held by tables no longer needed
 del draft
 print(type(feats).__name__, feats.shape)
 feats[["AGE_YEARS", "EMPLOYED_YEARS", "CREDIT_INCOME_RATIO", "EXT_SOURCE_MEAN"]].describe().round(2)
@@ -1337,9 +1392,11 @@ code("""
 # Check your work: 37 columns, the prohibited bases absent, and identical to the pipeline's tested function
 from baseline_features import engineer_baseline
 
+# Stop the run if this does not hold
 assert feats.shape == (307_511, 37), feats.shape
 assert not set(PROHIBITED_BASES) & set(feats.columns), "a prohibited basis reached the feature table"
 pd.testing.assert_frame_equal(feats, engineer_baseline(app))
+# Print the result
 print("wrangle(app) equals engineer_baseline(app)")
 """)
 
@@ -1354,6 +1411,7 @@ code("""
 full = feats.merge(history, on="SK_ID_CURR", how="left")
 n_numeric = len(BASE_NUMERIC_COLS) + len(ENGINEERED_NUMERIC) + len(RELATIONAL_NUMERIC)
 print(type(full).__name__, full.shape)
+# Print the result
 print(f"{n_numeric} numeric and {len(CATEGORICAL_COLS)} categorical candidates")
 """)
 
@@ -1365,7 +1423,7 @@ assert n_numeric + len(CATEGORICAL_COLS) == 62
 """)
 
 md("""
-## 1.5 Split
+## 1E. Split
 """)
 
 step("1.38", "Separate the outcome from the characteristics",
@@ -1400,6 +1458,7 @@ code("""
 X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=SEED, stratify=y)
 print(type(X_train).__name__, X_train.shape, X_val.shape)
 print(f"training: {len(X_train):,} applicants, default rate {y_train.mean():.2%}")
+# Print the result
 print(f"holdout:  {len(X_val):,} applicants, default rate {y_val.mean():.2%}")
 """)
 
@@ -1421,7 +1480,7 @@ md("""
 ---
 # Part 2: Build Model
 
-## 2.1 Baseline
+## 2A. Baseline
 
 Every model needs a bar to clear. Two are set here: a naive one that knows nothing, and a sensible one built from
 the application form alone.
@@ -1496,6 +1555,7 @@ code("""
 # The benchmark pipeline: impute, scale, encode, then a balanced logistic regression
 from baseline_model import build_pipeline
 
+# An unfitted copy of the benchmark
 benchmark = build_pipeline()
 # It picks its own application-form columns by name
 benchmark.fit(X_train, y_train)
@@ -1503,6 +1563,7 @@ benchmark.fit(X_train, y_train)
 benchmark_pd = benchmark.predict_proba(X_val)[:, 1]
 baseline_auc = roc_auc_score(y_val, benchmark_pd)
 print(type(benchmark_pd).__name__, benchmark_pd.shape)
+# Print the result
 print(f"application-only benchmark AUC: {baseline_auc:.4f}")
 """)
 
@@ -1514,7 +1575,7 @@ assert round(baseline_auc, 4) == 0.7467, f"expected AUC 0.7467, got {baseline_au
 md("""
 That is the bar: **0.7467**. The scorecard adds credit history and must beat it while staying readable.
 
-## 2.2 Iterate: Weight of Evidence
+## 2B. Iterate: Weight of Evidence
 
 A scorecard does not feed raw values to the model. It cuts each characteristic into bins and replaces each bin with
 one number, its Weight of Evidence. The idea comes from credit-scoring practice; Naeem Siddiqi's *Credit Risk
@@ -1541,6 +1602,7 @@ toy["share_of_defaulters"] = toy["defaulted"] / toy["defaulted"].sum()
 toy["woe"] = np.log(toy["share_of_repayers"] / toy["share_of_defaulters"])
 toy["iv_part"] = (toy["share_of_repayers"] - toy["share_of_defaulters"]) * toy["woe"]
 toy_iv = toy["iv_part"].sum()
+# Print the type and size of what this step made
 print(type(toy).__name__, toy.shape, f"| Information Value: {toy_iv:.3f}")
 toy.round(3)
 """)
@@ -1597,11 +1659,13 @@ woe_table["good"] = woe_table["n"] - woe_table["bad"]
 eps = 0.5
 k = len(woe_table)
 dist_good = (woe_table["good"] + eps) / (woe_table["good"].sum() + eps * k)
+# The same for the defaulters
 dist_bad = (woe_table["bad"] + eps) / (woe_table["bad"].sum() + eps * k)
 # WoE and IV
 woe_table["woe"] = np.log(dist_good / dist_bad)
 iv_by_hand = ((dist_good - dist_bad) * woe_table["woe"]).sum()
 print(type(woe_table).__name__, woe_table.shape, f"| IV of {col}, by hand: {iv_by_hand:.4f}")
+# Display the table
 woe_table.round(4)
 """)
 
@@ -1620,7 +1684,9 @@ code("""
 # The tested function, ten decile bins
 from woe_iv import fit_woe
 
+# The tested function on the same column and the same ten bins
 reference = fit_woe(X_train[col], y_train, is_categorical=False, n_bins=10)
+# Print the type and size of what this step made
 print(type(reference).__name__, sorted(reference))
 reference["table"][["n", "bad", "woe"]].round(4)
 """)
@@ -1636,9 +1702,11 @@ code("""
 fig, ax = plt.subplots(figsize=(10, 4))
 reference["table"]["woe"].plot(kind="bar", ax=ax, color=bar_colours(reference["table"]["woe"]), rot=45)
 ax.axhline(0, color=INK, lw=1)
+# Label the chart so each axis says what it shows
 ax.set_xlabel("Bin of EXT_SOURCE_MEAN (training applicants)")
 ax.set_ylabel("Weight of Evidence")
 ax.set_title("WoE climbs steadily from the riskiest bin to the safest")
+# Fit the layout, save the chart to figs/ for the README, and show it
 plt.tight_layout()
 plt.savefig("figs/woe_ext_source_mean.png", dpi=150, bbox_inches="tight")
 plt.show()
@@ -1646,7 +1714,8 @@ plt.show()
 
 md("""
 The WoE climbs steadily from the lowest band to the highest, the pattern of Step 1.19 on a scale the model can use.
-Missing scores sit near the riskier end: an applicant with no external score is a thin file.
+The Missing bin is only slightly riskier than average, far from the riskiest band: having no external score
+says little on its own.
 """)
 
 step("2.8", "Find the characteristics whose bins zig-zag",
@@ -1657,6 +1726,7 @@ step("2.8", "Find the characteristics whose bins zig-zag",
      "bin next to it. That is hard to defend to a credit committee and looks arbitrary to an applicant.")
 
 code("""
+# The tested check for a WoE that moves one way
 from woe_iv import is_monotonic_woe
 
 # Ten-bin WoE for every numeric candidate
@@ -1665,6 +1735,7 @@ for decile_col in MODEL_NUMERIC:
     decile_fits[decile_col] = fit_woe(X_train[decile_col], y_train, n_bins=10)
 
 
+# A sort key, written out so the ordering is plain to read
 def minus_iv(name):
     # Sort key: the largest IV first
     return -decile_fits[name]["iv"]
@@ -1676,6 +1747,7 @@ for zigzag_col in sorted(decile_fits, key=minus_iv):
     if not is_monotonic_woe(decile_fits[zigzag_col]):
         zigzag.append(zigzag_col)
 print(type(zigzag).__name__, len(zigzag))
+# Print the result
 print(f"numeric characteristics whose ten-bin WoE zig-zags: {len(zigzag)} of {len(MODEL_NUMERIC)}; strongest: {zigzag[0]}")
 """)
 
@@ -1696,6 +1768,7 @@ code("""
 example = zigzag[0]
 coarse = fit_woe(X_train[example], y_train, n_bins=10, binning="monotone")
 print(type(coarse).__name__, f"{example}: {len(decile_fits[example]['table'])} bins before, {len(coarse['table'])} after")
+# Display the merged bins
 coarse["table"][["n", "bad", "woe"]].round(4)
 """)
 
@@ -1716,6 +1789,7 @@ for ax, fit, title in [(axes[0], decile_fits[example], f"{example}: ten bins"), 
     ax.set_xlabel("")
     ax.set_ylabel("Weight of Evidence")
 plt.tight_layout()
+# Fit the layout, save the chart to figs/ for the README, and show it
 plt.savefig("figs/coarse_classing.png", dpi=150, bbox_inches="tight")
 plt.show()
 """)
@@ -1738,6 +1812,7 @@ code("""
 challengers = json.load(open("outputs/challengers.json", encoding="utf-8"))
 v = challengers["validation"]
 print(type(challengers).__name__, sorted(challengers))
+# Print the result
 print(f"validation AUC, ten bins:        {v['champion']['auc']:.4f}   "
       f"({v['champion']['n_numeric_monotonic']} of {v['champion']['n_numeric_kept']} numeric characteristics monotonic)")
 print(f"validation AUC, coarse classing: {v['coarse_classing']['auc']:.4f}   "
@@ -1763,6 +1838,7 @@ step("2.11", "Fit WoE for all 62 candidates",
      "with its share of defaulters.")
 
 code("""
+# The usual labels for IV strength
 from woe_iv import iv_strength
 
 # Coarse-classed WoE for each numeric candidate
@@ -1794,6 +1870,7 @@ iv_values = {}
 for iv_col in woe_fits:
     iv_values[iv_col] = woe_fits[iv_col]["iv"]
 ivs = pd.Series(iv_values).sort_values()
+# Print the type and size of what this step made
 print(type(ivs).__name__, len(ivs))
 print(f"strongest: {ivs.index[-1]} (IV {ivs.iloc[-1]:.3f}, {iv_strength(ivs.iloc[-1])})")
 """)
@@ -1812,12 +1889,15 @@ for iv_value in ivs:
     else:
         iv_colours.append("#a0aec0")
 fig, ax = plt.subplots(figsize=(9, 13))
+# Draw the default rate of each group as a bar
 ivs.plot(kind="barh", ax=ax, color=iv_colours)
 ax.axvline(IV_THRESHOLD, color=RED, ls="--", lw=1, label=f"gate 1: IV >= {IV_THRESHOLD}")
 ax.axvline(0.1, color=INK, ls=":", lw=1, label="0.10: medium")
+# Label the chart so each axis says what it shows
 ax.set_xlabel("Information value (training applicants)")
 ax.set_title(f"All {len(ivs)} candidate characteristics by information value")
 ax.legend(loc="lower right")
+# Fit the layout, save the chart to figs/ for the README, and show it
 plt.tight_layout()
 plt.savefig("figs/iv_all_candidates.png", dpi=150, bbox_inches="tight")
 plt.show()
@@ -1828,7 +1908,7 @@ The external scores lead by a distance; the grey bars at the bottom carry no usa
 above the "check for leakage" line, so it was checked: it averages three scores that all exist when the application
 is made, so its strength is real.
 
-## 2.3 Iterate: three selection gates
+## 2C. Iterate: three selection gates
 
 Not all 62 candidates should enter the model. Each passes three gates, and each removal has a reason a reviewer can
 check.
@@ -1871,6 +1951,7 @@ for gate1_col in iv_ranked:
     if ivs[gate1_col] >= IV_THRESHOLD:
         iv_kept.append(gate1_col)
 print(type(iv_kept).__name__, len(iv_kept))
+# Print the result
 print(f"Gate 1: {len(iv_kept)} of {len(iv_ranked)} characteristics have IV >= {IV_THRESHOLD}")
 # The twelve strongest, with their strength
 for top_col in iv_ranked[:12]:
@@ -1897,6 +1978,7 @@ emp_table = woe_fits["EMPLOYED_YEARS"]["table"]
 same_applicants = (X_train["DAYS_EMPLOYED_ANOM"] == 1).equals(X_train["EMPLOYED_YEARS"].isna())
 print(type(flag_fit).__name__)
 print(f"DAYS_EMPLOYED_ANOM = 1:    n={flag_fit['table'].loc['1', 'n']:,}  WoE={flag_fit['table'].loc['1', 'woe']:+.4f}")
+# Print the result
 print(f"EMPLOYED_YEARS = Missing:  n={emp_table.loc['Missing', 'n']:,}  WoE={emp_table.loc['Missing', 'woe']:+.4f}")
 print(f"same applicants in both:   {same_applicants}")
 """)
@@ -1920,9 +2002,11 @@ step("2.16", "Replace every value with its bin's WoE",
      "handled at the same time, which fixes the trap of Step 2.2.")
 
 code("""
+# The tested function that maps values to their bin's WoE
 from woe_iv import transform_woe
 
 
+# A helper that turns raw characteristics into WoE columns
 def woe_encode(frame, cols):
     # One column per characteristic, each value replaced by the WoE of its bin
     columns = []
@@ -1932,7 +2016,9 @@ def woe_encode(frame, cols):
     return np.column_stack(columns)
 
 
+# WoE-encode the training rows for the characteristics that passed gate 1
 W_iv = woe_encode(X_train, iv_kept)
+# Print the type and size of what this step made
 print(type(W_iv).__name__, W_iv.shape)
 print(f"WoE matrix: {W_iv.shape[0]:,} applicants x {W_iv.shape[1]} characteristics")
 """)
@@ -1969,9 +2055,11 @@ fig, ax = plt.subplots(figsize=(11, 9))
 top15 = iv_kept[:15]
 sns.heatmap(pd.DataFrame(corr[:15, :15], index=top15, columns=top15), vmin=-1, vmax=1, cmap="RdBu_r",
             annot=True, fmt=".2f", square=True, cbar=False, ax=ax, annot_kws={"size": 8})
+# Label the chart so each axis says what it shows
 ax.set_title("Correlation of WoE values among the 15 strongest characteristics")
 plt.tight_layout()
 plt.savefig("figs/woe_correlation_top15.png", dpi=150, bbox_inches="tight")
+# Show the chart
 plt.show()
 """)
 
@@ -1988,8 +2076,10 @@ step("2.18", "Apply gate 2: correlation",
      "one is named with its partner so a reviewer can check.")
 
 code("""
+# Gate 2 by hand: go through the characteristics from the highest IV down
 corr_kept = []
 corr_dropped = []
+# Keep a characteristic unless an already-kept one says the same thing
 for gate2_col in iv_kept:
     # The first already-kept characteristic this one is too correlated with, if any
     partner = None
@@ -2003,6 +2093,7 @@ for gate2_col in iv_kept:
     else:
         corr_dropped.append((gate2_col, partner, float(corr[pos[gate2_col], pos[partner]])))
 
+# Print the type and size of what this step made
 print(type(corr_kept).__name__, len(corr_kept))
 print(f"Gate 2: {len(corr_dropped)} dropped, {len(corr_kept)} kept")
 for dropped_col, partner_col, r in corr_dropped:
@@ -2030,7 +2121,9 @@ W_corr = W_iv[:, surviving_columns]
 m = W_corr.mean(axis=0)
 s = W_corr.std(axis=0)
 s[s == 0] = 1.0
+# Each column on the same scale
 Ws = (W_corr - m) / s
+# Print the type and size of what this step made
 print(type(Ws).__name__, Ws.shape)
 """)
 
@@ -2052,8 +2145,10 @@ code("""
 # find_worst_positive returns the characteristic with the largest positive coefficient and that coefficient
 from fit_model import find_worst_positive
 
+# Gate 3 by hand: start from the gate-2 survivors and refit until no sign is wrong
 sign_kept = list(corr_kept)
 sign_removed = []
+# Repeat: fit, find the worst wrong sign, remove it
 while True:
     # Column numbers of the characteristics still in
     cols_now = []
@@ -2068,6 +2163,7 @@ while True:
     sign_removed.append((worst_name, worst_coef))
     sign_kept.remove(worst_name)
 
+# Print the type and size of what this step made
 print(type(sign_kept).__name__, len(sign_kept))
 print(f"Gate 3: {len(sign_removed)} removed, {len(sign_kept)} kept")
 for removed_col, removed_coef in sign_removed:
@@ -2080,6 +2176,7 @@ removed_names = []
 for removed_record in sign_removed:
     removed_names.append(removed_record[0])
 assert "AGE_YEARS" in removed_names
+# Stop the run if this does not hold
 assert (fit.coef_ < 0).all()
 """)
 
@@ -2091,7 +2188,7 @@ history and income type are in the model, age's coefficient flips. Kept, it woul
 `class_weight="balanced"` makes the 8% of defaulters count as much as the 92% of repayers while fitting; Step 2.26
 corrects the effect this has on the intercept.
 
-## 2.4 Iterate: the final model and its points
+## 2D. Iterate: the final model and its points
 """)
 
 step("2.21", "Fit the final model with the project's own solver",
@@ -2102,10 +2199,13 @@ step("2.21", "Fit the final model with the project's own solver",
      "the direction that reduces the error most, until a step no longer helps.")
 
 code("""
+# The hand-written solver and the hand-written AUC
 from from_scratch_lr import FromScratchLogisticRegression
 from metrics_scratch import auc_rank_sum
 
+# The final fit: start from the gate-3 survivors and stop when every sign is right
 kept_cols = list(sign_kept)
+# Repeat: encode, scale, fit, and drop the worst wrong sign until none is left
 while True:
     # WoE matrices for training and holdout
     Xw_train = woe_encode(X_train, kept_cols)
@@ -2126,6 +2226,7 @@ while True:
     sign_removed.append((worst_name, worst_coef))
     kept_cols.remove(worst_name)
 
+# Print the type and size of what this step made
 print(type(scratch).__name__, scratch.coef_.shape)
 print(f"characteristics in the scorecard: {len(kept_cols)} of {len(woe_fits)}")
 """)
@@ -2147,6 +2248,7 @@ code("""
 holdout_pd = scratch.predict_proba(Xw_val_s)
 full_auc = auc_rank_sum(y_val, holdout_pd)
 print(type(holdout_pd).__name__, holdout_pd.shape)
+# Print the result
 print(f"holdout AUC: {full_auc:.4f}  (application-only benchmark: {baseline_auc:.4f})")
 """)
 
@@ -2164,6 +2266,7 @@ step("2.23", "Confirm the pipeline builds the same model",
      "someone ran by hand.")
 
 code("""
+# The pipeline's own fit and holdout summary
 from run_pipeline import build_validation_scores, summarise
 
 # result: the fitted model and gates; sc: the scorecard; Xf_val, yf_val: the holdout; scores: holdout points
@@ -2177,19 +2280,24 @@ assert result["kept_cols"] == kept_cols
 pipeline_dropped = []
 for dropped_record in result["correlation_gate_dropped"]:
     pipeline_dropped.append(dropped_record[:2])
+# The same pairs from the hand-built gate 2
 notebook_dropped = []
 for dropped_record in corr_dropped:
     notebook_dropped.append(dropped_record[:2])
+# Stop the run if this does not hold
 assert pipeline_dropped == notebook_dropped
 pipeline_removed = []
 for removed_record in result["sign_gate_removed"]:
     pipeline_removed.append(removed_record[0])
+# The same names from the hand-built gate 3
 notebook_removed = []
 for removed_record in sign_removed:
     notebook_removed.append(removed_record[0])
+# Stop the run if this does not hold
 assert pipeline_removed == notebook_removed
 assert np.allclose(result["model"].coef_, scratch.coef_)
 assert abs(result["val_auc"] - full_auc) < 1e-12
+# Print the result
 print("step-by-step build matches the pipeline: same characteristics, coefficients and AUC")
 """)
 
@@ -2217,9 +2325,11 @@ code("""
 fig, ax = plt.subplots(figsize=(9, 8))
 coefficients.plot(kind="barh", ax=ax, color=BLUE)
 ax.axvline(0, color=INK, lw=1)
+# Label the chart so each axis says what it shows
 ax.set_xlabel("Coefficient on standardised WoE (all negative: more WoE, lower risk)")
 ax.set_title(f"The {len(kept_cols)} characteristics in the scorecard")
 plt.tight_layout()
+# Fit the layout, save the chart to figs/ for the README, and show it
 plt.savefig("figs/coefficients.png", dpi=150, bbox_inches="tight")
 plt.show()
 """)
@@ -2251,6 +2361,7 @@ step("2.26", "Correct the intercept to the real default rate",
      "any coefficient. The ranking (and so the AUC) is untouched, but the probabilities become trustworthy.")
 
 code("""
+# A helper: probability to log-odds
 def logit(p):
     # Log-odds of a probability
     return np.log(p / (1 - p))
@@ -2271,8 +2382,9 @@ step("2.27", "Choose the points scale",
      "Two conventions fix it: 600 points means odds of 20 repayers to 1 defaulter, and every 40 points doubles the "
      "odds. Then factor = 40 / ln(2), offset = 600 - factor x ln(20), and base points = offset - factor x intercept.",
      "what is PDO?",
-     "\"Points to double the odds\": how many extra points make an applicant twice as likely to repay as to "
-     "default. It is a lender's convention, not a statistic; 20:1 at 600 and a PDO of 40 are common choices.")
+     "\"Points to double the odds\": the number of extra points that doubles an applicant's good-to-bad odds. "
+     "Here it is 40, so odds of 20:1 at 600 points become 40:1 at 640 and 80:1 at 680. It is a lender's convention, "
+     "not a statistic; 20:1 at 600 and a PDO of 40 are common choices.")
 
 code("""
 # Points per unit of log-odds
@@ -2303,6 +2415,7 @@ points_table = woe_fits[top]["table"][["n", "bad", "woe"]].copy()
 points_table["default_rate"] = points_table["bad"] / points_table["n"]
 points_table["points"] = -factor * coef_raw[0] * points_table["woe"]
 print(type(points_table).__name__, points_table.shape, "|", top)
+# Display the table
 points_table.round(3)
 """)
 
@@ -2322,6 +2435,7 @@ for ax, chart_col in zip(axes, kept_cols[:3]):
     ax.set_xlabel("")
     ax.set_ylabel("Points")
 plt.tight_layout()
+# Fit the layout, save the chart to figs/ for the README, and show it
 plt.savefig("figs/points_by_bin.png", dpi=150, bbox_inches="tight")
 plt.show()
 """)
@@ -2338,7 +2452,8 @@ step("2.29", "Score one real holdout applicant by hand",
      "It proves the points table is the whole model: nothing hidden, every point traceable to a bin.")
 
 code("""
-from woe_iv import _bin_labels
+# The public function that gives a value's bin label, the key of the points table
+from woe_iv import bin_labels
 
 # The first holdout applicant
 applicant = Xf_val.iloc[0]
@@ -2346,7 +2461,7 @@ total = base_points
 for score_col in kept_cols:
     # The bin this applicant falls in
     score_fit = woe_fits[score_col]
-    label = _bin_labels(pd.Series([applicant[score_col]]), score_fit["is_categorical"], score_fit["edges"]).iloc[0]
+    label = bin_labels(pd.Series([applicant[score_col]]), score_fit).iloc[0]
     # Add that bin's points; a category never seen in training scores 0
     total += sc["points_tables"][score_col].get(label, 0.0)
 print(type(applicant).__name__, f"applicant {applicant.name}: {total:.1f} points")
@@ -2359,7 +2474,7 @@ assert round(total, 1) == 608.4
 """)
 
 md("""
-## 2.5 Evaluate
+## 2E. Evaluate
 """)
 
 step("2.30", "Test the measuring tools first",
@@ -2370,8 +2485,10 @@ step("2.30", "Test the measuring tools first",
      "share of repayers scoring below any cut-off: the credit industry's standard measure of separation.")
 
 code("""
+# KS by hand and from scipy, to compare
 from scipy.stats import ks_2samp
 
+# The hand-written KS from src/metrics_scratch.py
 from metrics_scratch import ks_statistic
 
 # 5,000 made-up outcomes and scores; rounding creates tied scores
@@ -2382,7 +2499,9 @@ score_check = np.round(rng.normal(0, 1, 5000) + y_check * 0.8, 2)
 auc_mine = auc_rank_sum(y_check, score_check)
 auc_sklearn = roc_auc_score(y_check, score_check)
 ks_mine = ks_statistic(y_check, score_check)
+# KS from scipy, the reference
 ks_scipy = ks_2samp(score_check[y_check == 1], score_check[y_check == 0]).statistic
+# Print the type and size of what this step made
 print(type(score_check).__name__, score_check.shape)
 print(f"AUC: from scratch {auc_mine:.6f}, scikit-learn {auc_sklearn:.6f}")
 print(f"KS:  from scratch {ks_mine:.6f}, scipy {ks_scipy:.6f}")
@@ -2404,24 +2523,80 @@ code("""
 summary = summarise(result, sc, Xf_val, yf_val, scores)
 lo, hi = summary["val_auc_ci95_bootstrap"]
 print(type(summary).__name__, len(summary), "entries")
+# Print the result
 print(f"AUC  {summary['val_auc']:.4f}  (95% bootstrap interval {lo:.4f} to {hi:.4f})")
 print(f"KS   {summary['val_ks']:.4f}")
 print(f"average score, repaid: {summary['mean_score_repaid']:.1f}   defaulted: {summary['mean_score_defaulted']:.1f}")
+# Print the result
 print(f"from-scratch fit vs scikit-learn: prediction correlation {result['pred_corr']:.6f}")
 """)
 
 code("""
 # Check your work
 assert round(summary["val_auc"], 3) == 0.754 and round(summary["val_ks"], 3) == 0.381
-assert lo > baseline_auc, "even the lower end of the interval should beat the benchmark"
+assert round(lo, 4) == 0.7473 and round(hi, 4) == 0.7613
 """)
 
 md("""
 The scorecard reaches an AUC of 0.754: given one defaulter and one repayer, it scores the defaulter lower about three
-times in four. Even the lower end of the bootstrap interval (0.7473 to 0.7613) is above the application-only
-benchmark of 0.7467. KS is 0.381: at the best cut-off, 38 percentage points more of the defaulters than of the
+times in four. The bootstrap interval (0.7473 to 0.7613) shows how far that figure could move with a different
+sample of 61,503 applicants. KS is 0.381: at the best cut-off, 38 percentage points more of the defaulters than of the
 repayers fall below it. Repayers average 594 points and defaulters 542. The from-scratch fit agrees with
 scikit-learn's to six decimal places, so the hand-written solver is not the weak link.
+
+**Is the lift over the benchmark real?** It is tempting to say yes because the scorecard's interval sits above the
+benchmark's 0.7467, but that compares an interval with a single number. Both models were scored on the same
+61,503 applicants, so a resample that is hard for one is usually hard for the other. The fair test resamples once,
+scores both models on the same rows, and keeps the difference; then repeats.
+""")
+
+code("""
+# Both models' predicted PDs on the holdout, in the same row order (both were scored on X_val)
+scorecard_pd_val = np.asarray(holdout_pd)
+benchmark_pd_val = np.asarray(benchmark_pd)
+y_val_array = y_val.to_numpy()
+# One resample by hand: 61,503 row numbers drawn with replacement
+rng_demo = np.random.default_rng(SEED)
+rows = rng_demo.integers(0, len(y_val_array), len(y_val_array))
+# Both AUCs on exactly those rows, and the difference
+one_scorecard = auc_rank_sum(y_val_array[rows], scorecard_pd_val[rows])
+one_benchmark = auc_rank_sum(y_val_array[rows], benchmark_pd_val[rows])
+# Print the type and size of what this step made
+print(type(rows).__name__, rows.shape)
+print(f"one resample: scorecard {one_scorecard:.4f}, benchmark {one_benchmark:.4f}, "
+      f"difference {one_scorecard - one_benchmark:.4f}")
+""")
+
+code("""
+# Check your work: the resample has as many rows as the holdout, and each AUC is a valid AUC
+assert len(rows) == len(y_val_array) == 61_503
+assert round(one_scorecard, 4) == 0.7484 and round(one_benchmark, 4) == 0.7373
+""")
+
+code("""
+# The tested function repeats that 500 times with the pipeline's seed and keeps the middle 95%
+from metrics_scratch import bootstrap_auc_difference
+
+# The lift and its paired interval
+auc_lift, lift_lo, lift_hi = bootstrap_auc_difference(y_val_array, scorecard_pd_val, benchmark_pd_val,
+                                                      n_boot=500, seed=SEED)
+# Print the result
+print(type(auc_lift).__name__)
+print(f"scorecard minus benchmark: {auc_lift:.4f} AUC (95% paired bootstrap interval {lift_lo:.4f} to {lift_hi:.4f})")
+""")
+
+code("""
+# Check your work: the point estimate is the plain difference of the two AUCs, inside its own interval
+assert abs(auc_lift - (full_auc - baseline_auc)) < 1e-12
+assert lift_lo < auc_lift < lift_hi
+assert round(auc_lift, 4) == 0.0073 and round(lift_lo, 4) == 0.0047 and round(lift_hi, 4) == 0.0101
+""")
+
+md("""
+The scorecard is 0.0073 AUC above the benchmark, and the paired interval, 0.0047 to 0.0101, stays above zero: the
+lift is real, but small. Most of the ranking power is already on the application form, above all in the external
+scores. So the case for the scorecard over the benchmark is a stated reason for every decline, points that move one
+way, and control over which characteristics may enter, not better ranking.
 """)
 
 step("2.32", "Draw the ROC curve and the KS gap",
@@ -2452,11 +2627,13 @@ assert round(ks_gap, 3) == round(summary["val_ks"], 3)
 """)
 
 code("""
+# Two panels side by side
 fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 # Left: the ROC curve against a coin toss
 axes[0].plot(fpr, tpr, color=BLUE, lw=2, label=f"scorecard (AUC {summary['val_auc']:.3f})")
 axes[0].plot([0, 1], [0, 1], color="#a0aec0", ls="--", lw=1, label="constant score (AUC 0.5)")
 axes[0].set_xlabel("Share of repayers scored below the cut-off")
+# Label the chart so each axis says what it shows
 axes[0].set_ylabel("Share of defaulters scored below the cut-off")
 axes[0].set_title("ROC curve on the holdout")
 axes[0].legend(loc="lower right")
@@ -2465,12 +2642,15 @@ axes[1].plot(sorted_scores, cum_defaulters, color=RED, lw=2, label="defaulters")
 axes[1].plot(sorted_scores, cum_repayers, color=BLUE, lw=2, label="repayers")
 axes[1].vlines(sorted_scores[ks_at], cum_repayers[ks_at], cum_defaulters[ks_at], color=INK, ls="--",
                label=f"KS = {cum_defaulters[ks_at] - cum_repayers[ks_at]:.3f} at {sorted_scores[ks_at]:.0f} points")
+# Label the chart so each axis says what it shows
 axes[1].set_xlabel("Scorecard points")
 axes[1].set_ylabel("Cumulative share of applicants below the score")
 axes[1].set_title("KS: the largest gap between the two cumulative distributions")
+# Label the chart so each axis says what it shows
 axes[1].legend(loc="lower right")
 plt.tight_layout()
 plt.savefig("figs/roc_and_ks.png", dpi=150, bbox_inches="tight")
+# Show the chart
 plt.show()
 """)
 
@@ -2478,8 +2658,10 @@ step("2.33", "Check calibration",
      "Does a predicted 5% default rate really mean 5%? Compare predicted and observed rates in ten groups of "
      "predicted probability of default.",
      "what are PD and calibration?",
-     "PD is the probability of default, the quantity Basel capital rules and IFRS 9 provisions are built on. A model "
-     "is calibrated when its predicted PDs match the default rates actually observed.")
+     "PD is the probability of default. Here \"default\" is Home Credit's own payment-difficulty flag (`TARGET`), "
+     "not the 90-days-past-due definition that Basel capital rules and IFRS 9 provisions use, so this PD is a "
+     "probability of that flag. A model is calibrated when its predicted PDs match the default rates actually "
+     "observed.")
 
 code("""
 # Odds near 600 points, and the average predicted against the observed default rate
@@ -2504,12 +2686,15 @@ code("""
 fig, ax = plt.subplots(figsize=(6, 5.5))
 ax.plot(calibration["mean_predicted_pd"] * 100, calibration["observed_default_rate"] * 100, marker="o", color=BLUE, label="scorecard, by PD decile")
 limit = max(calibration["mean_predicted_pd"].max(), calibration["observed_default_rate"].max()) * 100 * 1.1
+# Draw the default rate of each group as a bar
 ax.plot([0, limit], [0, limit], color="#a0aec0", ls="--", lw=1, label="perfect calibration")
 ax.set_xlabel("Mean predicted probability of default (%)")
 ax.set_ylabel("Observed default rate (%)")
+# Label the chart so each axis says what it shows
 ax.set_title("Predicted against observed default rate, holdout")
 ax.legend(loc="upper left")
 plt.tight_layout()
+# Fit the layout, save the chart to figs/ for the README, and show it
 plt.savefig("figs/calibration.png", dpi=150, bbox_inches="tight")
 plt.show()
 """)
@@ -2548,6 +2733,7 @@ step("2.35", "Picture the separation",
      "Two humps, defaulters to the left of repayers, overlapping as little as possible.")
 
 code("""
+# The two charts the README uses, drawn by the tested functions
 from make_figures import default_rate_by_band, score_distribution
 
 # Repayers and defaulters by score
@@ -2576,6 +2762,7 @@ code("""
 h = challengers["holdout"]
 readability_price = h["lightgbm"]["auc"] - summary["val_auc"]
 print(type(h).__name__, sorted(h))
+# Print the result
 print(f"holdout AUC: scorecard {summary['val_auc']:.4f}, LightGBM {h['lightgbm']['auc']:.4f}")
 print(f"price of a readable, reason-giving model: {readability_price:.4f} AUC")
 """)
@@ -2601,6 +2788,7 @@ code("""
 age_check = summary["reg_b_age_62_plus"]
 print(type(age_check).__name__)
 print(f"every coefficient negative: {summary['all_coefficients_negative']}")
+# Print the result
 print(f"AGE_YEARS in the scorecard: {age_check['age_feature_in_scorecard']}; age check passed: {age_check['passed']}")
 print(f"points for pensioners and the unemployed (EMPLOYED_YEARS Missing bin): {summary['employed_years_missing_bin_points']:+.1f}")
 """)
@@ -2631,11 +2819,14 @@ step("3.1", "Turn scores into lending policies",
      "Approve only the highest-scoring share of the holdout and measure each policy. Credit loss = credit amount of "
      "each approved loan that defaulted x 45%.",
      "what is LGD?",
-     "Loss given default: the share of the amount lent that is lost when a borrower defaults. 45% is the "
-     "supervisory value for senior unsecured lending under the Basel foundation internal-ratings-based (IRB) "
-     "approach.")
+     "Loss given default: the share of the amount lent that is lost when a borrower defaults. 45% is an "
+     "illustrative flat figure, borrowed from the Basel foundation internal-ratings-based (F-IRB) supervisory value "
+     "for senior unsecured claims on banks and other financial institutions. Basel sets no supervisory LGD for "
+     "consumer loans: a bank using internal ratings estimates its own. One flat LGD multiplies every policy's loss "
+     "by the same number, so the share of loss avoided does not depend on it; only the amounts do.")
 
 code("""
+# The tested function that builds the money table
 from business_impact import lending_policy_table
 
 # One row per approval rate: 100%, 90%, 80%, 70%
@@ -2664,6 +2855,7 @@ policy_labels = []
 for approval_rate in policy["approval_rate"]:
     policy_labels.append(f"{approval_rate:.0%}")
 fig, ax = plt.subplots(figsize=(9, 4.5))
+# Width of each bar, so two fit side by side
 width = 0.38
 # Blue: loss avoided; red: good borrowers declined
 ax.bar(np.arange(len(policy_labels)) - width / 2, policy["loss_avoided_pct"] * 100, width, color=BLUE, label="credit loss avoided")
@@ -2676,12 +2868,15 @@ for bar_number in range(len(policy)):
     ax.text(bar_number + width / 2, declined * 100 + 1, f"{declined:.0%}", ha="center", fontsize=9)
 ax.set_xticks(np.arange(len(policy_labels)))
 ax.set_xticklabels(policy_labels)
+# Label the chart so each axis says what it shows
 ax.set_xlabel("Share of applicants approved (highest scores first)")
 ax.set_ylabel("Share (%)")
 ax.set_title(f"What each approval policy buys and costs, {len(yf_val):,} held-out applicants")
+# Label the chart so each axis says what it shows
 ax.legend(loc="upper left")
 plt.tight_layout()
 plt.savefig("figs/policy_tradeoff.png", dpi=150, bbox_inches="tight")
+# Show the chart
 plt.show()
 """)
 
@@ -2711,6 +2906,7 @@ code("""
 ex = summary["example_declined_applicant"]
 print(type(ex).__name__)
 print(f"applicant scoring {ex['score']:.0f}, below the 80% approval cut-off of {ex['cut_off_score_at_80pct_approval']:.0f}. Reasons:")
+# One line per reason
 for reason in ex["reasons_points_below_best_bin"]:
     print(f"  {reason['feature']}: {reason['points']:.1f} points below the best bin")
 """)
@@ -2735,6 +2931,7 @@ for driver_col in kept_cols:
     driver_points = sc["points_tables"][driver_col]
     points_range[driver_col] = driver_points.max() - driver_points.min()
 drivers = pd.Series(points_range).sort_values()
+# Print the type and size of what this step made
 print(type(drivers).__name__, len(drivers))
 drivers.tail(10).round(1)
 """)
@@ -2749,6 +2946,7 @@ code("""
 fig, ax = plt.subplots(figsize=(9, 5))
 drivers.tail(10).plot(kind="barh", ax=ax, color=BLUE)
 ax.set_xlabel("Points between the worst and the best bin")
+# Label the chart so each axis says what it shows
 ax.set_title("What moves an applicant's score most")
 plt.tight_layout()
 plt.show()
@@ -2767,8 +2965,10 @@ entitled to; every characteristic moves in one direction and was kept or removed
 fair-lending conditions are tested, not asserted. Start the cut-off discussion from the 80% policy, then price it
 with the margin on a good loan, which this data does not contain.
 
-**Scope.** It estimates the probability of default only. An IFRS 9 provision also needs loss given default and
-exposure at default, which need recovery data this dataset does not have.
+**Scope.** It estimates the probability of Home Credit's payment-difficulty flag, over one outcome window. An
+IFRS 9 provision also needs lifetime PD curves, a test for a significant increase in credit risk to stage loans,
+forward-looking economic scenarios, and loss given default and exposure at default, which need recovery data this
+dataset does not have.
 """)
 
 step("3.5", "Record every modelling decision",
@@ -2778,14 +2978,18 @@ step("3.5", "Record every modelling decision",
      "it and the trade-off accepted. A model validator reviews a scorecard through exactly this record.")
 
 code("""
+# Tools to show the log as a table, and to read the saved results
 from IPython.display import Markdown, display
 
+# The reader for outputs/results.json
 from results_io import read_results
 
 # The fit with sex and marital status added is run only by the pipeline (src/fit_model.py), so read its result
 ablation = read_results()["metrics"]["prohibited_basis_ablation"]
+# The validation-slice results of the challengers, and the points that double the odds
 ch_val = challengers["validation"]
 pdo = summary["scorecard_factor"] * np.log(2)
+# Information value of the two prohibited bases
 sex_iv = ablation["prohibited_bases_iv"]["CODE_GENDER"]
 marital_iv = ablation["prohibited_bases_iv"]["NAME_FAMILY_STATUS"]
 # The correlation-gate example quoted in the log
@@ -2803,70 +3007,86 @@ assert overdue is not None and abs(pdo - 40) < 1e-6
 """)
 
 code("""
+# A short name for the holdout summary used in every row
 m = summary
+# One row per decision: what I chose, the alternative, the evidence, the cost
 decisions = [
+    # Fair lending: which characteristics may enter at all
     ("Leave out sex and marital status (1.4)",
      f"Use them: IV {sex_iv:.3f} and {marital_iv:.3f}",
      f"holdout AUC {ablation['val_auc_sklearn_final_features']:.4f} without them, "
      f"{ablation['val_auc_sklearn_with_prohibited_bases']:.4f} with them",
      f"{ablation['val_auc_sklearn_with_prohibited_bases'] - ablation['val_auc_sklearn_final_features']:.4f} AUC "
      "given up; required by ECOA and Regulation B"),
+    # Data cleaning: the 1,000-year placeholder
     ("Read DAYS_EMPLOYED = 365243 as missing, with its own bin (1.11, 1.33)",
      "Keep the raw value (about 1,000 years in work)",
      f"{int(positive.sum()):,} applicants carry the placeholder; their missing bin earns "
      f"{m['employed_years_missing_bin_points']:.1f} points, so pensioners are not penalised",
      "none found; ratios built on employment stay sane"),
+    # Validation design
     ("Random 80/20 holdout, stratified on default (1.39)",
      "Out-of-time holdout (impossible: no application dates)",
      f"{len(X_val):,} held out; default rate {m['train_bad_rate']:.2%} training, {m['val_bad_rate']:.2%} holdout",
      "drift over time is untested (limitations)"),
+    # Binning
     ("Coarse classing over plain decile bins (2.9, 2.10)",
      "Decile bins, the champion",
      f"monotonic numeric characteristics {ch_val['coarse_classing']['n_numeric_monotonic']} of "
      f"{ch_val['coarse_classing']['n_numeric_kept']}, against {ch_val['champion']['n_numeric_monotonic']} of "
      f"{ch_val['champion']['n_numeric_kept']}; rule: {challengers['decision_rule']}",
      f"{challengers['coarse_classing_auc_loss_validation']:.4f} validation AUC"),
+    # Selection gate 1
     (f"Gate 1: keep characteristics with IV >= {IV_THRESHOLD} (2.14)",
      "A stricter screen",
      f"{m['n_after_iv_screen']} of {m['n_candidate_features']} candidates pass",
      "permissive on purpose; gates 2 and 3 remove redundancy and flipped effects"),
+    # Selection gate 2
     (f"Gate 2: of any WoE pair with |r| > {CORRELATION_THRESHOLD}, keep the higher-IV one (2.18)",
      "Keep both and let the fit split the weight",
      f"{len(m['correlation_gate_dropped'])} dropped, e.g. {overdue['dropped']} (r = {overdue['r']:.3f} "
      f"with {overdue['kept']})",
      "a little signal in the dropped partner"),
+    # Selection gate 3
     ("Gate 3: drop any characteristic whose coefficient flips sign (2.20)",
      "Keep it for its AUC contribution",
      f"{len(m['sign_gate_removed'])} removed; all {m['n_features_kept']} kept coefficients negative: "
      f"{m['all_coefficients_negative']}",
      "the gate does not show which characteristic absorbed the effect (limitations)"),
+    # The solver
     ("Logistic regression written from scratch, checked against scikit-learn (2.21)",
      "scikit-learn alone",
      f"max coefficient difference {m['coef_diff_max_vs_sklearn']:.4f}, prediction correlation "
      f"{m['pred_corr_vs_sklearn']:.6f}",
      "more code to test (tests/test_from_scratch_lr.py)"),
+    # Calibration
     ("Class-balanced fit, then correct the intercept to the true default rate (2.26)",
      "Unweighted fit, or no correction",
      f"intercept {m['intercept_balanced']:+.3f} -> {m['intercept_prior_corrected']:+.3f}; mean predicted PD "
      f"{m['mean_predicted_pd_val']:.2%} against {m['val_bad_rate']:.2%} observed; largest decile gap "
      f"{m['calibration_max_abs_gap']:.4f}",
      "one extra step that must be repeated on every refit"),
+    # The points scale
     (f"Scale: 600 points at 20:1 good-to-bad odds, {pdo:.0f} points to double the odds (2.27)",
      f"Anchor 600 to the training population's own odds ({m['train_good_to_bad_odds']:.1f}:1)",
      f"implied odds at 600: {m['implied_odds_at_base_score']:.1f}:1; observed in the {near['score_band'][0]} to "
      f"{near['score_band'][1]} band: {near['good_to_bad']:.1f}:1 ({near['n']:,} applicants)",
      "a policy convention, not a statistic; a lender would use its own scale"),
+    # Model family
     ("A points scorecard rather than gradient boosting (2.36, 3.4)",
      "LightGBM on the same candidates",
      f"holdout AUC {m['val_auc']:.4f} against LightGBM {challengers['holdout']['lightgbm']['auc']:.4f}",
      f"{challengers['holdout']['lightgbm']['auc'] - m['val_auc']:.4f} AUC paid for a fixed reason on every decline"),
+    # Pricing the policies
     ("Price policies with one 45% loss given default (3.1)",
      "A modelled LGD (impossible: no recovery data)",
      f"approving the top 80% (score {top80['cut_off_score']:.0f}+) avoids {top80['loss_avoided_pct']:.0%} of loss "
      f"and declines {top80['good_borrowers_declined_pct']:.0%} of good borrowers",
-     "loss side only; margin on good loans ignored (limitations)"),
+     "loss side only, margin on good loans ignored; the flat LGD moves the amounts, not the shares"),
 ]
+# The rows as a table
 log = pd.DataFrame(decisions, columns=["Decision", "Alternative considered", "Evidence from this run", "Trade-off accepted"])
+# Print the type and size of what this step made
 print(type(log).__name__, log.shape)
 """)
 
@@ -2875,15 +3095,18 @@ code("""
 assert len(log) == 12 and log.notna().all().all()
 assert ablation["val_auc_sklearn_with_prohibited_bases"] - ablation["val_auc_sklearn_final_features"] < 0.005
 assert m["all_coefficients_negative"] and abs(m["implied_odds_at_base_score"] - 20) < 1e-6
+# Stop the run if this does not hold
 assert m["calibration_max_abs_gap"] < 0.01
 """)
 
 code("""
+# A helper that makes a cell value safe inside a markdown table
 def clean(value):
     # Pipes inside cells (as in |r|) are escaped so they don't split columns
     return str(value).replace("|", "\\\\|")
 
 
+# A helper that writes a table as markdown text
 def markdown_table(df):
     # A plain markdown table: header, divider, then one line per row
     lines = []
@@ -2900,6 +3123,7 @@ def markdown_table(df):
     return "\\n".join(lines)
 
 
+# Show the decision log as a table
 display(Markdown(markdown_table(log)))
 """)
 
@@ -2916,12 +3140,14 @@ step("3.6", "Check every figure against the pipeline's results file",
      "cannot.")
 
 code("""
+# math.isclose for comparing decimals
 import math
 
 # The published metrics
 ref = read_results()["metrics"]
 
 
+# A helper that compares two results value by value
 def same(a, b):
     # Compare nested results, allowing only floating-point rounding differences
     if isinstance(a, dict):
@@ -2993,9 +3219,11 @@ step("3.8", "Write the run record",
      "them on trust.")
 
 code("""
+# Tools to record the Python version, the commit, the date and the library versions
 import platform
 import subprocess
 from datetime import datetime, timezone
+# Library versions as installed
 from importlib.metadata import PackageNotFoundError, version
 
 # The commit the code was at, and whether the code had edits not yet committed.
@@ -3017,6 +3245,7 @@ for package in ["numpy", "pandas", "scikit-learn", "scipy", "matplotlib", "seabo
     except PackageNotFoundError:
         package_versions[package] = None
 
+# Everything needed to reproduce this run
 run_record = {
     "run_date_utc": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
     "runtime_minutes": round((time.time() - RUN_STARTED) / 60),
@@ -3027,6 +3256,9 @@ run_record = {
     "results_checked_against": "outputs/results.json",
     "entries_checked": len(summary),
     "holdout_auc": float(full_auc),
+    "benchmark_auc": float(baseline_auc),
+    "auc_lift_over_benchmark": float(auc_lift),
+    "auc_lift_ci95_paired_bootstrap": [float(lift_lo), float(lift_hi)],
     "characteristics_kept": len(kept_cols),
 }
 # Save it next to the pipeline's results
@@ -3040,13 +3272,14 @@ code("""
 # Check your work
 saved = json.load(open("outputs/notebook_run.json", encoding="utf-8"))
 assert saved["entries_checked"] == 46 and saved["characteristics_kept"] == 32
+assert round(saved["benchmark_auc"], 4) == 0.7467 and abs(saved["auc_lift_over_benchmark"] - auc_lift) < 1e-12
 """)
 
 md("""
 ## What you built
 
 - **Part 1, Prepare Data.** You loaded 307,511 applications, found and fixed a placeholder that gave pensioners a
-  thousand years of work, saw that the external scores carry far more signal than the application form, rolled six
+  thousand years of work, saw that the external scores carry far more signal than the other application fields, rolled six
   credit-history tables up to one row per applicant, built 62 candidate characteristics with one `wrangle()`
   function, and held back 61,503 applicants.
 - **Part 2, Build Model.** You set two baselines (a constant score at AUC 0.5 and an application-only model at
@@ -3066,8 +3299,11 @@ md("""
 - **One loss given default, no revenue.** The policy table applies a single 45% LGD and ignores the interest earned
   on good loans, so it shows the loss side of the cut-off decision only.
 - **Cut-offs are set on the same holdout** that measures the loss avoided.
-- **Probability of default only.** A full IFRS 9 provision also needs loss-given-default and exposure-at-default
-  models, and this dataset has no recovery data to build them from.
+- **Home Credit's default flag, not a regulatory default.** `TARGET` marks payment difficulties on early
+  instalments, not the 90-days-past-due definition of Basel and IFRS 9.
+- **Probability of default only, over one horizon.** A full IFRS 9 provision also needs lifetime PD term
+  structures, significant-increase-in-credit-risk staging, forward-looking scenarios, and loss-given-default and
+  exposure-at-default models; this dataset has no recovery data for the last two.
 - **The currency is unstated.** Credit-loss figures are in the dataset's own units.
 - **The history tables are summarised, not modelled.** Patterns within a history (a borrower who was late, then
   caught up) are invisible to the scorecard.
@@ -3087,7 +3323,7 @@ md("""
 4. Test the scorecard for proxy discrimination (for example, family size as a proxy for marital status) with a
    formal disparate-impact analysis.
 
-**Exercises**
+**Sensitivity checks to try**
 
 1. In Step 2.18, set `CORRELATION_THRESHOLD = 0.8` at the top of the cell and rerun to Step 2.22. Which
    characteristics drop out, and what happens to AUC?
