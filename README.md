@@ -146,7 +146,7 @@ python src/business_impact.py     # money table and policy charts
 python src/challengers.py         # coarse classing and LightGBM comparison (about 15 minutes)
 ```
 
-The notebook `Credit_Risk_Scorecard.ipynb` walks through the same build and checks its figures against `outputs/results.json`. Edit `build_notebook.py`, not the notebook. Figures here come from the run of 2026-10-19 (commit `e683632`), which gave the same results as the earlier run of 2026-10-06.
+The notebook `Credit_Risk_Scorecard.ipynb` is a guided build of the same model in three parts (Prepare Data, Build Model, Communicate Results). Each numbered step has one instruction, a one-line explanation of the idea behind it, one small code cell with a comment on each line, and a "Check your work" cell that stops the run if the step went wrong. It reads the raw CSVs with `pd.read_csv`, works each calculation by hand, asserts that the tested function in `src/` gives the same answer, and checks every figure against `outputs/results.json`. Edit `build_notebook.py`, not the notebook. Figures here come from the run of 2026-10-19 (commit `e683632`), which gave the same results as the earlier run of 2026-10-06.
 
 ## Project structure
 
