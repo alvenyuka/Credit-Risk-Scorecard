@@ -29,6 +29,7 @@ import pytest
 from woe_iv import (
     MISSING_LABEL,
     apply_continuous_bins,
+    bin_labels,
     fit_continuous_bins,
     fit_woe,
     is_monotonic_woe,
@@ -250,3 +251,20 @@ def test_unknown_binning_is_rejected():
     x, y = _noisy_monotone(1_000)
     with pytest.raises(ValueError):
         fit_woe(x, y, binning="clever")
+
+
+def test_bin_labels_are_the_keys_the_woe_table_uses(separable):
+    # The public label function must give the same bins fit_woe and transform_woe use,
+    # including the missing bin and an unseen category
+    y, _, noise = separable
+    with_gap = noise.copy()
+    with_gap.iloc[:50] = np.nan
+    numeric_fit = fit_woe(with_gap, y, n_bins=10)
+    labels = bin_labels(with_gap, numeric_fit)
+    assert set(labels.unique()) == set(numeric_fit["table"].index)
+    assert (labels.iloc[:50] == MISSING_LABEL).all()
+    woe_by_label = labels.map(numeric_fit["table"]["woe"])
+    assert np.allclose(woe_by_label.to_numpy(), transform_woe(with_gap, numeric_fit).to_numpy())
+    colours = pd.Series(np.where(y.to_numpy() == 1, "red", "blue"))
+    categorical_fit = fit_woe(colours, y, is_categorical=True)
+    assert list(bin_labels(pd.Series(["red", "green"]), categorical_fit)) == ["red", "green"]

@@ -141,6 +141,11 @@ def _bin_labels(x: pd.Series, is_categorical: bool, edges) -> pd.Series:
     return apply_continuous_bins(x, edges)
 
 
+def bin_labels(x: pd.Series, fit_result: dict) -> pd.Series:
+    """Bin label of each value under a fitted WoE result (the keys of its points table)."""
+    return _bin_labels(x, fit_result["is_categorical"], fit_result["edges"])
+
+
 def fit_woe(x: pd.Series, y: pd.Series, is_categorical: bool = False,
             n_bins: int = 10, epsilon: float = 0.5, binning: str = "decile") -> dict:
     """Fit bins and WoE for one feature on training data.
