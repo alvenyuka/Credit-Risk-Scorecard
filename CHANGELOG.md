@@ -25,8 +25,22 @@ model figure changes: `outputs/results.json`, `business_impact.json`,
 - The notebook reads the raw CSVs with `pd.read_csv`, works each calculation
   by hand, asserts that the tested function in `src/` gives the same answer,
   and checks every figure against `outputs/results.json`.
-- README paragraph on the notebook updated to describe the guided build.
-- `outputs/notebook_run.json` records the new run.
+- Every top-level statement in a code cell has a plain-words comment above
+  it (or sits in a group of at most three under one).
+- The lift over the application-only benchmark is tested with a paired
+  bootstrap of the AUC difference (`bootstrap_auc_difference` in
+  `src/metrics_scratch.py`): 0.0073 AUC, 95% interval 0.0047 to 0.0101.
+- The example applicant is scored with the public `bin_labels` in
+  `src/woe_iv.py`; sections are lettered (1A, 2B) so they no longer collide
+  with step numbers.
+- Domain wording: the flat 45% LGD, the PDO definition, the default flag
+  behind PD and the IFRS 9 limitation, as in 1.0.0's README fixes.
+- README paragraph on the notebook updated to describe the guided build, and
+  Results gives the paired interval for the lift over the benchmark.
+- `outputs/notebook_run.json` records the new run, plus the benchmark AUC, the
+  lift and its interval. `tests/test_readme_numbers.py` checks the README's
+  lift interval against it, and the bar labels and KS cut-off against the
+  notebook's printed output.
 
 ## [1.0.0] - 2026-10-24
 
