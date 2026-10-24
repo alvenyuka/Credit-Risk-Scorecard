@@ -6,8 +6,13 @@ On the held-out applicants (61,503 in the published run), approve only the highe
 credit loss those defaults would cause, and how many good borrowers are turned away.
 
 Credit loss = credit amount of each defaulted, approved loan x loss given default.
-LGD is an assumption, not an output: 45%, the Basel foundation-IRB supervisory value
-for senior unsecured exposures. Home Credit does not state the currency of AMT_CREDIT,
+LGD is an assumption, not an output: an illustrative flat 45%, borrowed from the Basel
+foundation-IRB supervisory value for senior unsecured claims on banks and other
+financial institutions (retail IRB has no supervisory LGD; a bank estimates its own).
+One flat LGD scales every policy's loss equally, so the loss-avoided percentages do
+not depend on it; only the money amounts do. The lgd_basis string written to
+business_impact.json predates this wording and is left as it is so the committed
+outputs stay byte-identical until the next full re-run. Home Credit does not state the currency of AMT_CREDIT,
 so amounts are in the dataset's own currency units.
 
 Reads the holdout scores that run_pipeline.py saves (outputs/val_scores.parquet) and

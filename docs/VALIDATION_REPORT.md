@@ -127,7 +127,7 @@ and 70% approval.
 | # | Finding | Severity | Action |
 |---|---|---|---|
 | F1 | No out-of-time validation. The data has no application dates, so stability on a later population is untested. The train-to-holdout PSI of 0.0002 only confirms that the random split is random. | High | Re-validate on dated applications from the target portfolio, with quarterly PSI on scores and on each characteristic. |
-| F2 | One loss-given-default figure (45%, the Basel foundation-IRB value for senior unsecured exposures) for every loan. | Medium | Replace with a portfolio LGD estimate before quoting loss figures in money. |
+| F2 | One illustrative loss-given-default figure for every loan: 45%, borrowed from the Basel foundation-IRB supervisory value for senior unsecured claims on banks and other financial institutions. Basel sets no supervisory LGD for retail exposures; a bank using internal ratings estimates its own. A flat LGD scales every policy's loss equally, so the loss-avoided percentages do not depend on it, only the money amounts. | Medium | Replace with a portfolio LGD estimate before quoting loss figures in money. |
 | F3 | The sign gate removed 15 characteristics, including credit amount and annuity, which carry real information. | Low | Accepted for explainability; monitor through the LightGBM challenger (section 6). |
 | F4 | The currency of the amounts is not stated in the source data. | Low | Quote losses as percentages, as the README does. |
 
