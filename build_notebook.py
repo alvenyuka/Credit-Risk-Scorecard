@@ -2970,10 +2970,12 @@ plt.show()
 
 md("""
 **The model in words.** An applicant starts with the base points (Step 2.27) and gains or loses points for each of 32
-characteristics. The external credit scores move a score most, followed by the applicant's own history with Home
-Credit and other lenders (refusals, late instalments, how long their credits have run) and a few application facts
-such as education and employment length. Every characteristic gives more points to its safer bins, and none of
-them is sex, marital status or age.
+characteristics. The external credit scores move a score most, and education level is the third-largest driver.
+Next come the type of organisation the applicant works for, how much of their credit-card limit they use, the
+ratio of the credit to the price of the goods, their occupation and the share of their earlier applications that
+were refused. Late instalments and the age of their credits play only a small part. Education, occupation and
+organisation type are candidates for the proxy (fair-lending) test listed in Next steps. Every characteristic
+gives more points to its safer bins, and none of them is sex, marital status or age.
 
 **Recommendation to a credit committee.** Use the scorecard for this lending decision even though a gradient-boosted
 model ranks applicants better (Step 2.36): every point has a checkable reason, which a declined applicant is
