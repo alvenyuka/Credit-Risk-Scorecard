@@ -2970,8 +2970,8 @@ plt.show()
 
 md("""
 **The model in words.** An applicant starts with the base points (Step 2.27) and gains or loses points for each of 32
-characteristics. The external credit scores move a score most, and education level is the third-largest driver.
-Next come the type of organisation the applicant works for, how much of their credit-card limit they use, the
+characteristics. Two of the external scores (EXT_SOURCE_3 and EXT_SOURCE_2) move a score most; education level is third,
+ahead of the other external score and the average of all three. Next come the type of organisation the applicant works for, how much of their credit-card limit they use, the
 ratio of the credit to the price of the goods, their occupation and the share of their earlier applications that
 were refused. Late instalments and the age of their credits play only a small part. Education, occupation and
 organisation type are candidates for the proxy (fair-lending) test listed in Next steps. Every characteristic
@@ -3347,7 +3347,7 @@ md("""
 2. Add the margin on a good loan to the policy table, so the cut-off can be set on profit, not loss alone.
 3. Build loss-given-default and exposure-at-default models if recovery data becomes available, to move from PD to
    expected credit loss.
-4. Test the scorecard for proxy discrimination (for example, family size as a proxy for marital status) with a
+4. Test the scorecard for proxy discrimination (for example, education, occupation and organisation type acting as proxies for sex, marital status or age) with a
    formal disparate-impact analysis.
 
 **Sensitivity checks to try**
