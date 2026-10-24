@@ -4,7 +4,8 @@ All notable changes to this project are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). A change to any
 figure in `outputs/` is a new minor version at least, and the README states the
-run that produced it.
+run that produced it. A version's date is the day its code was finished; its
+tag is created when the pull request that carries it is merged.
 
 ## [Unreleased]
 
@@ -27,7 +28,7 @@ model figure changes: `outputs/results.json`, `business_impact.json`,
 - README paragraph on the notebook updated to describe the guided build.
 - `outputs/notebook_run.json` records the new run.
 
-## [1.0.0] - 2026-10-22
+## [1.0.0] - 2026-10-24
 
 The first tagged release: the scorecard as published, with its figures tested
 against the files the pipeline wrote.
@@ -46,11 +47,22 @@ against the files the pipeline wrote.
 - Model validation report (`docs/VALIDATION_REPORT.md`) and methodology
   (`docs/METHODOLOGY.md`).
 - Live case-study page in `demo/`.
-- `tests/test_readme_numbers.py`: every README figure is formatted from the
-  output files at the precision the README prints and must match the text;
-  the README's test count must match `tests/`.
+- `tests/test_readme_numbers.py`: every number in the README's prose, tables
+  and image descriptions is pinned in reading order. Each is formatted from
+  `outputs/*.json` at the printed precision, found in the executed notebook's
+  output, found in the build log in `notes/`, or listed as a fixed design or
+  wording number with its reason. The README's test count must match `tests/`.
 - Pull request template.
 
 ### Fixed
 
 - README run provenance and table count (2026-10-21 review).
+- README baseline: the executed application-only benchmark, AUC 0.7467 on the
+  holdout, replaces the August build-log figure, and Results states what the
+  0.007 lift over it means.
+- The 45% loss given default is described as an illustrative flat figure
+  borrowed from the Basel foundation-IRB value for senior unsecured claims on
+  financial institutions (Basel sets no retail value), in the README, the
+  validation report, the demo note and `src/business_impact.py`.
+- Limits: `TARGET` is Home Credit's payment-difficulty flag, not a regulatory
+  default, and the IFRS 9 limit names lifetime PD, staging and scenarios.
