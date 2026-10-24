@@ -158,7 +158,7 @@ commits use the old names.
 
 ## Methodology
 
-1. **Baseline.** A logistic regression on the application form alone sets the
+1. **Baseline.** A logistic regression on the application table alone sets the
    floor: AUC 0.7467 on the holdout (printed by the notebook).
 2. **Statistics implemented and verified.** Weight of Evidence, Information Value,
    a gradient-descent logistic regression and AUC, GINI, KS and PSI are written in
@@ -236,9 +236,10 @@ The Old pipeline column is read from the pre-rebuild README and `BUILD_STATUS.md
 at commit `a8708a0~1`; every figure in the This rebuild column is in
 `results.json`.
 
-`results.json` records `git_commit: 75ef602`, the commit the run started from,
-because the run was made before its code was committed; the code that produced
-these figures is the commit that adds coarse classing (`src/challengers.py`).
+`results.json` records `generated_at_utc: 2026-10-19` and `git_commit: e683632`.
+That run gave the same results as the 2026-10-06 run at `75ef602`, which was made
+before its code was committed; the code that produced those figures is the commit
+that adds coarse classing (`src/challengers.py`).
 
 | | This rebuild | Old pipeline |
 |---|---:|---:|
