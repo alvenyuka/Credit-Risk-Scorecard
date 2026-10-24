@@ -24,6 +24,8 @@ floor: whatever the relational data adds in Week 7+ has to beat this.
      income.
    - `EXT_SOURCE_MEAN/STD/COUNT`: treated missingness on the three external
      bureau-style scores as its own signal rather than just imputing it away.
+
+   Correction 2026-10-24: the data dictionary says only 'Normalized score from external data source', so these are not known to be bureau scores and their timing is assumed, not proven; see docs/METHODOLOGY.md Known Limitations.
 3. `src/baseline_model.py`: impute (median/most-frequent) -> scale -> one-hot
    -> `LogisticRegression(class_weight="balanced")`, 80/20 stratified split.
 
