@@ -8,6 +8,25 @@ run that produced it.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-24
+
+The notebook becomes a guided build a newcomer can follow cell by cell. No
+model figure changes: `outputs/results.json`, `business_impact.json`,
+`challengers.json` and `scorecard_points.json` are identical to 1.0.0.
+
+### Changed
+
+- `Credit_Risk_Scorecard.ipynb` (written by `build_notebook.py`) is rebuilt in
+  three parts, Prepare Data, Build Model and Communicate Results, of numbered
+  steps. Each step has one instruction, a one-line explanation of the idea
+  behind it, one small code cell with a comment on each line, printed output,
+  and a "Check your work" cell that stops the run if the step went wrong.
+- The notebook reads the raw CSVs with `pd.read_csv`, works each calculation
+  by hand, asserts that the tested function in `src/` gives the same answer,
+  and checks every figure against `outputs/results.json`.
+- README paragraph on the notebook updated to describe the guided build.
+- `outputs/notebook_run.json` records the new run.
+
 ## [1.0.0] - 2026-10-22
 
 The first tagged release: the scorecard as published, with its figures tested
