@@ -28,9 +28,11 @@ against the files the pipeline wrote.
 - Model validation report (`docs/VALIDATION_REPORT.md`) and methodology
   (`docs/METHODOLOGY.md`).
 - Live case-study page in `demo/`.
-- `tests/test_readme_numbers.py`: every README figure is formatted from the
-  output files at the precision the README prints and must match the text;
-  the README's test count must match `tests/`.
+- `tests/test_readme_numbers.py`: every number in the README's prose, tables
+  and image descriptions is pinned in reading order. Each is formatted from
+  `outputs/*.json` at the printed precision, found in the executed notebook's
+  output, found in the build log in `notes/`, or listed as a fixed design or
+  wording number with its reason. The README's test count must match `tests/`.
 - Pull request template.
 
 ### Fixed

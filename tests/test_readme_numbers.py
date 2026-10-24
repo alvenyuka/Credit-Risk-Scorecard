@@ -1,12 +1,26 @@
-"""Every figure the README quotes, checked against the files the pipeline wrote.
+"""Every number in the README, in order, checked against where it comes from.
 
-The README is typed by hand, but its numbers come from outputs/results.json,
-outputs/business_impact.json and outputs/challengers.json. These tests format
-each number from those files at the precision the README prints it (0.754, not
-0.7539670402) and check that exact text is in the README. A re-run that moves a
-number, or an edit that mistypes one, fails here instead of reaching a reader.
+The README is typed by hand. This file pins every number in its prose, tables
+and image descriptions, one occurrence at a time, in the order they appear.
+Each expected number is one of four kinds:
 
-No data is needed: the outputs are committed, so these run in CI.
+- a pipeline result, formatted from outputs/results.json,
+  outputs/business_impact.json or outputs/challengers.json at the precision the
+  README prints it (0.754, not 0.7539670402);
+- a figure the executed notebook prints, checked against the notebook's saved
+  output;
+- a figure from the week-by-week build log, checked against that file in notes/;
+- a fixed number that is part of the design or the wording (the 600-point
+  scale, the 0.01 IV threshold, a step number), listed with the reason it is
+  fixed.
+
+Code blocks, inline code and link targets are skipped; the test count in the
+How to run block has its own test at the end. A re-run that moves a result, or
+an edit that mistypes any number, changes the sequence and fails here. Adding
+or rewording a number in the README means adding it here too, with its source.
+
+No data is needed: the outputs and the executed notebook are committed, so
+these run in CI.
 """
 import ast
 import json
@@ -25,6 +39,21 @@ def load_json(name):
 METRICS = load_json("results.json")["metrics"]
 POLICIES = load_json("business_impact.json")["policies"]
 CHALLENGERS = load_json("challengers.json")
+
+
+def notebook_printed_text():
+    # Join every text output the executed notebook saved, so a figure the
+    # README takes from the notebook can be found in what the notebook printed
+    notebook = json.loads((ROOT / "Credit_Risk_Scorecard.ipynb").read_text(encoding="utf-8"))
+    pieces = []
+    for cell in notebook["cells"]:
+        for output in cell.get("outputs", []):
+            text = output.get("text") or output.get("data", {}).get("text/plain", "")
+            pieces.append("".join(text))
+    return "\n".join(pieces)
+
+
+NOTEBOOK_TEXT = notebook_printed_text()
 
 
 def assert_readme_says(phrase):
@@ -51,16 +80,273 @@ def count_test_functions():
     return total
 
 
-def test_headline_ranking_figures():
-    auc = METRICS["val_auc"]
-    low, high = METRICS["val_auc_ci95_bootstrap"]
-    assert f"{auc:.3f}" == "0.754"
-    assert_readme_says(f"AUC {auc:.3f}")
-    assert_readme_says(f"95% bootstrap interval {low:.3f} to {high:.3f}")
-    assert_readme_says(f"| AUC | {auc:.3f} |")
-    assert_readme_says(f"| KS | {METRICS['val_ks']:.3f} |")
-    assert_readme_says(f"| Gini | {METRICS['val_gini']:.3f} |")
-    assert f"{METRICS['val_ks']:.3f}" == "0.381"
+# ---------------------------------------------------------------------------
+# Reading the numbers out of the README
+# ---------------------------------------------------------------------------
+
+DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
+NUMBER = re.compile(r"(?<![\w.,/-])-?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?!\w)|(?<=/)\d+(?!\w)")
+
+
+def readme_prose():
+    # Drop what is not prose: fenced code, inline code, link targets, HTML tags
+    # and the "1." markers of the numbered build steps
+    text = re.sub(r"```.*?```", "", README, flags=re.S)
+    text = re.sub(r"`[^`]*`", "", text)
+    text = re.sub(r"\]\([^)]*\)", "]", text)
+    text = re.sub(r"<[^>]+>", "", text)
+    text = re.sub(r"(?m)^\s*\d+\.\s", "", text)
+    return text
+
+
+def readme_numbers():
+    # Every number in reading order, with its line for the error message.
+    # A date counts as one token.
+    found = []
+    for line_no, line in enumerate(readme_prose().splitlines(), start=1):
+        position = 0
+        while position < len(line):
+            date = DATE.match(line, position)
+            if date and (position == 0 or not line[position - 1].isalnum()):
+                found.append((date.group(0), line_no, line))
+                position = date.end()
+                continue
+            number = NUMBER.match(line, position)
+            if number:
+                found.append((number.group(0), line_no, line))
+                position = number.end()
+                continue
+            position += 1
+    return found
+
+
+# ---------------------------------------------------------------------------
+# The expected sequence, one entry per occurrence
+# ---------------------------------------------------------------------------
+
+NOTEBOOK_FIGURES = []   # (README text, text the notebook prints)
+NOTE_FIGURES = []       # (README text, notes file, text in that file)
+
+
+def result(text):
+    # A pipeline result, already formatted from outputs/*.json
+    return text
+
+
+def from_notebook(text, printed=None):
+    # A figure the executed notebook prints. Thousands separators may differ.
+    NOTEBOOK_FIGURES.append((text, printed if printed is not None else text))
+    return text
+
+
+def from_notes(text, file_name, needle):
+    # A figure from the build log in notes/
+    NOTE_FIGURES.append((text, file_name, needle))
+    return text
+
+
+def fixed(text, why):
+    # A number that is part of the design or the wording, not a result
+    assert why
+    return text
+
+
+def pct(x, places=1):
+    return f"{x * 100:.{places}f}"
+
+
+def bn(x):
+    return f"{x / 1e9:.2f}"
+
+
+def expected_numbers():
+    m = METRICS
+    auc = f"{m['val_auc']:.3f}"
+    auc4 = f"{m['val_auc']:.4f}"
+    ks = f"{m['val_ks']:.3f}"
+    low, high = m["val_auc_ci95_bootstrap"]
+    n_holdout = f"{m['n_validation_rows']:,}"
+    bad_rate = pct(m["train_bad_rate"])
+    good_rate = pct(1 - m["train_bad_rate"])
+    lowest = pct(m["default_rate_lowest_decile"])
+    highest = pct(m["default_rate_highest_decile"])
+    p100, p90, p80, p70 = policy_at(1.0), policy_at(0.9), policy_at(0.8), policy_at(0.7)
+    lightgbm = CHALLENGERS["holdout"]["lightgbm"]["auc"]
+    observed = m["observed_odds_near_base_score"]
+    example = m["example_declined_applicant"]
+    reasons = example["reasons_points_below_best_bin"]
+    ablation = m["prohibited_basis_ablation"]
+    holdout = CHALLENGERS["holdout"]
+    rows = from_notebook("307,511", "307511")
+    baseline = from_notebook("0.7467", "application-only benchmark AUC: 0.7467")
+    placeholder = from_notebook("365,243", "365243")
+
+    seq = []
+    # Opening and data line
+    seq += [rows]
+    seq += [result(lowest), result(highest)]                     # hero image description
+    seq += [rows, result(bad_rate), fixed("8", "tables in the Kaggle download"),
+            fixed("7", "tables the model uses")]
+    # Results
+    seq += [fixed("20", "holdout share of the split"), result(n_holdout)]
+    seq += [result(auc), result(f"{m['val_auc'] * 100:.0f}"),   # "about 75% of the time"
+            fixed("95", "interval level"), result(f"{low:.3f}"), result(f"{high:.3f}"),
+            fixed("95", "interval level")]
+    seq += [result(lowest), result(highest)]
+    seq += [result(f"{p80['approval_rate']:.0%}".rstrip("%")), result(f"{p80['loss_avoided_pct']:.0%}".rstrip("%")),
+            result(pct(p80["good_borrowers_declined_pct"]))]
+    seq += [result(f"{m['calibration_max_abs_gap'] * 100:.1f}")]
+    seq += [result(f"{lightgbm:.3f}"), result(f"{lightgbm - m['val_auc']:.3f}"), result(auc),
+            fixed("11", "step number")]
+    seq += [baseline, result(f"{m['val_auc'] - float(baseline):.3f}"), result(auc4)]
+    seq += [result(str(m["n_features_kept"]))]                   # demo line
+    # Measures table
+    seq += [result(n_holdout)]
+    seq += [result(auc), fixed("0.5", "AUC of a coin flip"), fixed("1.0", "AUC of a perfect ranking")]
+    seq += [result(ks)]
+    seq += [result(f"{m['val_gini']:.3f}"), fixed("0", "Gini range"), fixed("1", "Gini range"),
+            fixed("2", "Gini formula"), fixed("1", "Gini formula")]
+    seq += [result(f"{m['mean_score_repaid']:.0f}"), result(f"{m['mean_score_defaulted']:.0f}"),
+            result(f"{m['score_min']:.0f}"), result(f"{m['score_max']:.0f}")]
+    seq += [fixed("600", "base score of the scale"), result(f"{observed['good_to_bad']:.1f}"),
+            result(f"{m['implied_odds_at_base_score']:.1f}"), result(str(observed["score_band"][0])),
+            result(str(observed["score_band"][1])), result(f"{observed['good_to_bad']:.0f}"),
+            fixed("1", "odds wording")]
+    seq += [result(f"{m['psi_train_to_holdout_scores']:.4f}"), fixed("0.1", "usual PSI stability threshold"),
+            fixed("0", "PSI wording")]
+    # Money table paragraph and table
+    seq += [fixed("45", "assumed loss given default"), fixed("45", "assumed loss given default")]
+    seq += [result(f"{p100['approved']:,}"), result(pct(p100["default_rate_approved"])),
+            result(bn(p100["credit_loss"])), result(f"{p100['good_borrowers_declined_pct']:.0%}".rstrip("%"))]
+    for row in (p90, p80, p70):
+        seq += [result(f"{row['approval_rate']:.0%}".rstrip("%")), result(f"{row['cut_off_score']:.1f}"),
+                result(f"{row['approved']:,}"), result(pct(row["default_rate_approved"])),
+                result(bn(row["credit_loss"])), result(f"{row['loss_avoided_pct']:.0%}".rstrip("%")),
+                result(pct(row["good_borrowers_declined_pct"]))]
+    seq += [result(bn(p100["credit_loss"])), result(bn(p70["credit_loss"])),
+            result(f"{p70['approval_rate']:.0%}".rstrip("%"))]  # policy chart description
+    seq += [result(f"{p80['approval_rate']:.0%}".rstrip("%"))]
+    # Step 1
+    seq += [result(bad_rate), result(good_rate), placeholder,
+            result(f"{int(placeholder.replace(',', '')) / 365.25:,.0f}")]
+    seq += [fixed("282,686", "bar label in figs/target_balance.png; sum checked below"),
+            fixed("24,825", "bar label in figs/target_balance.png; sum checked below"),
+            result(good_rate), result(bad_rate)]
+    # Step 2
+    seq += [baseline, fixed("2026", "year of the build log"),
+            from_notes("0.7487", "week6_log.md", "Validation AUC: 0.7487")]
+    # Steps 5 and 6
+    seq += [result(str(m["n_candidate_features"]))]
+    seq += [result(str(m["n_candidate_features"])), result(str(m["n_features_kept"]))]
+    seq += [fixed("0.01", "IV gate threshold"), result(str(m["n_after_iv_screen"]))]
+    seq += [fixed("0.9", "correlation gate threshold"), result(str(m["n_after_correlation_gate"]))]
+    seq += [result(str(m["n_features_kept"]))]
+    seq += [result(f"{ablation['val_auc_sklearn_final_features']:.4f}"),
+            result(f"{ablation['val_auc_sklearn_with_prohibited_bases']:.4f}")]
+    # Step 7
+    seq += [result(f"{m['pred_corr_vs_sklearn']:.6f}"), result(f"{m['coef_diff_max_vs_sklearn']:.4f}")]
+    # Step 8: the scale is a design choice, the odds pair follows from it
+    seq += [fixed("600", "base score"), fixed("20", "odds at the base score"), fixed("1", "odds wording"),
+            fixed("40", "points to double the odds"), fixed("20", "odds at 600"), fixed("1", "odds wording"),
+            fixed("600", "base score"), fixed("40", "doubled odds"), fixed("1", "odds wording"),
+            fixed("640", "600 plus one PDO")]
+    # Step 9
+    seq += [fixed("20", "holdout share of the split")]
+    seq += [result(auc), result(ks), fixed("571", "score at the KS gap, annotated in figs/roc_and_ks.png")]
+    # Step 10
+    seq += [result(f"{example['score']:.0f}"), result(f"{example['cut_off_score_at_80pct_approval']:.1f}"),
+            result(f"{p80['approval_rate']:.0%}".rstrip("%")), result(f"{reasons[0]['points']:.1f}"),
+            result(f"{reasons[1]['points']:.1f}"), result(f"{reasons[2]['points']:.1f}")]
+    # Step 11
+    seq += [result(str(m["n_candidate_features"])), fixed("0.005", "coarse-classing decision rule"),
+            result(f"{CHALLENGERS['coarse_classing_auc_loss_validation']:.4f}"),
+            result(f"{holdout['champion']['auc']:.4f}"), result(f"{holdout['coarse_classing']['auc']:.4f}"),
+            result(f"{holdout['lightgbm']['auc']:.4f}"), result(f"{lightgbm - m['val_auc']:.3f}"),
+            result(f"{CHALLENGERS['interpretability_price_holdout_auc']:.3f}")]
+    # Problems I hit
+    seq += [from_notes("0.0016", "week7_log.md", "~1.6e-3")]
+    seq += [result(f"{m['train_good_to_bad_odds']:.1f}"), from_notes("0.905", "week8_log.md", "0.905"),
+            from_notes("0.999997", "week8_log.md", "0.999997"), result(f"{m['pred_corr_vs_sklearn']:.6f}")]
+    seq += [placeholder, result(str(len(m["sign_gate_removed"])))]
+    validation = CHALLENGERS["validation"]["champion"]
+    seq += [result(str(validation["n_numeric_monotonic"])), result(str(validation["n_numeric_kept"])),
+            result(str(m["n_numeric_features_monotonic_woe"]))]
+    seq += [fixed("600", "base score"), fixed("20", "designed odds"), fixed("1", "odds wording"),
+            fixed("9", "week number"), fixed("20", "designed odds"), fixed("1", "odds wording"),
+            fixed("600", "base score"), from_notes("11.4", "week9_log.md", "11.4:1"), fixed("1", "odds wording"),
+            fixed("50", "balanced weighting"), fixed("50", "balanced weighting"), result(bad_rate),
+            result(f"{m['intercept_balanced']:.4f}"), result(f"{m['intercept_prior_corrected']:.4f}"),
+            fixed("600", "base score"), result(f"{observed['good_to_bad']:.1f}"), fixed("1", "odds wording"),
+            result(f"{m['implied_odds_at_base_score']:.1f}")]
+    # Data
+    seq += [rows, fixed("8", "tables in the Kaggle download"), fixed("7", "tables the model uses")]
+    seq += [fixed("20", "holdout share of the split")]
+    # Limits
+    seq += [fixed("45", "assumed loss given default")]
+    seq += [fixed("90", "regulatory days-past-due definition"), fixed("9", "IFRS 9")]
+    seq += [fixed("9", "IFRS 9")]
+    seq += [from_notes("0.905", "week8_log.md", "0.905"), fixed("2026", "year of the build log")]
+    # How to run: provenance of the committed outputs
+    seq += [fixed("2026-10-19", "date of the run that wrote outputs/results.json; checked below"),
+            fixed("2026-10-06", "date of the earlier run with the same results")]
+    return seq
+
+
+def test_every_readme_number_in_order():
+    expected = expected_numbers()
+    found = readme_numbers()
+    for index in range(min(len(expected), len(found))):
+        text, line_no, line = found[index]
+        assert text == expected[index], (
+            f"number {index + 1} in the README is {text!r}, expected {expected[index]!r}; "
+            f"line {line_no}: {line.strip()[:160]}"
+        )
+    if len(found) > len(expected):
+        extra_text, extra_line, _ = found[len(expected)]
+        raise AssertionError(f"README has a number the test does not expect: {extra_text!r} on line {extra_line}")
+    assert len(found) == len(expected), f"README ends before the expected number {expected[len(found)]!r}"
+
+
+def test_notebook_sourced_numbers_are_printed_by_the_notebook():
+    expected_numbers()
+    assert NOTEBOOK_FIGURES
+    for text, printed in NOTEBOOK_FIGURES:
+        assert printed in NOTEBOOK_TEXT, f"README figure {text} is not in the notebook's output ({printed!r})"
+
+
+def test_notes_sourced_numbers_are_in_the_build_log():
+    expected_numbers()
+    assert NOTE_FIGURES
+    for text, file_name, needle in NOTE_FIGURES:
+        log = (ROOT / "notes" / file_name).read_text(encoding="utf-8")
+        assert needle in log, f"README figure {text} is not in notes/{file_name} ({needle!r})"
+
+
+def test_target_counts_add_up():
+    # The bar labels in step 1 must sum to the row count and give the stated rates
+    repaid, defaulted = 282_686, 24_825
+    assert repaid + defaulted == 307_511
+    assert f"{defaulted / (repaid + defaulted):.1%}" == f"{METRICS['train_bad_rate']:.1%}" == "8.1%"
+
+
+def test_run_provenance_matches_results_file():
+    stamped = load_json("results.json")
+    assert stamped["generated_at_utc"].startswith("2026-10-19")
+    assert_readme_says(f"(commit `{stamped['git_commit']}`)")
+
+
+def test_headline_sentences():
+    # The four headline sentences, pinned whole so a stray copy elsewhere cannot stand in
+    m = METRICS
+    low, high = m["val_auc_ci95_bootstrap"]
+    assert f"{m['val_auc']:.3f}" == "0.754" and f"{m['val_ks']:.3f}" == "0.381"
+    assert_readme_says(f"**The score ranks risk well.** AUC {m['val_auc']:.3f}: pick one")
+    assert_readme_says(f"(95% bootstrap interval {low:.3f} to {high:.3f}:")
+    row = policy_at(0.8)
+    assert f"{row['loss_avoided_pct']:.0%}" == "47%"
+    assert_readme_says(f"**Approving only the top 80% cuts credit losses by {row['loss_avoided_pct']:.0%}.**")
+    assert_readme_says(f"| AUC | {m['val_auc']:.3f} |")
+    assert_readme_says(f"| KS | {m['val_ks']:.3f} |")
 
 
 def test_holdout_size_and_default_rate():
@@ -68,13 +354,6 @@ def test_holdout_size_and_default_rate():
     assert n_holdout == 61_503
     assert_readme_says(f"({n_holdout:,})")
     assert_readme_says(f"| Measure (holdout of {n_holdout:,}) |")
-    assert_readme_says(f"({METRICS['val_bad_rate']:.1%} defaulted)")
-
-
-def test_default_rate_by_score_decile():
-    lowest = METRICS["default_rate_lowest_decile"]
-    highest = METRICS["default_rate_highest_decile"]
-    assert_readme_says(f"defaulted {lowest:.1%} of the time, the highest-scoring tenth {highest:.1%}")
 
 
 def test_money_table_matches_business_impact():
@@ -92,95 +371,28 @@ def test_money_table_matches_business_impact():
         )
 
 
-def test_eighty_percent_policy_headline():
-    row = policy_at(0.8)
-    assert f"{row['loss_avoided_pct']:.0%}" == "47%"
-    assert_readme_says(f"Approving only the top 80% cuts credit losses by {row['loss_avoided_pct']:.0%}.")
-    assert_readme_says(f"turning away {row['good_borrowers_declined_pct']:.1%} of the borrowers who would have repaid")
-
-
-def test_score_scale_and_stability_table():
-    assert_readme_says(f"| {METRICS['mean_score_repaid']:.0f} vs {METRICS['mean_score_defaulted']:.0f} |")
-    assert_readme_says(f"Scores run from {METRICS['score_min']:.0f} to {METRICS['score_max']:.0f} on the holdout")
-    observed = METRICS["observed_odds_near_base_score"]
-    assert_readme_says(f"| {observed['good_to_bad']:.1f} observed, {METRICS['implied_odds_at_base_score']:.1f} designed |")
-    assert_readme_says(f"Applicants scoring {observed['score_band'][0]} to {observed['score_band'][1]}")
-    assert_readme_says(f"| {METRICS['psi_train_to_holdout_scores']:.4f} |")
-
-
-def test_calibration_gap():
-    gap_points = METRICS["calibration_max_abs_gap"] * 100
-    assert_readme_says(f"agree within {gap_points:.1f} percentage points")
-
-
-def test_readability_price():
-    scorecard_auc = METRICS["val_auc"]
-    lightgbm_auc = CHALLENGERS["holdout"]["lightgbm"]["auc"]
-    assert_readme_says(
-        f"reaches AUC {lightgbm_auc:.3f} on the same applicants, {lightgbm_auc - scorecard_auc:.3f} above "
-        f"the scorecard's {scorecard_auc:.3f}"
-    )
-
-
-def test_challenger_figures_in_step_11():
-    assert_readme_says(f"It cost {CHALLENGERS['coarse_classing_auc_loss_validation']:.4f}")
-    holdout = CHALLENGERS["holdout"]
-    assert_readme_says(f"equal-size bins scored AUC {holdout['champion']['auc']:.4f}")
-    assert_readme_says(f"coarse-classed scorecard {holdout['coarse_classing']['auc']:.4f}")
-    assert_readme_says(f"LightGBM reached {holdout['lightgbm']['auc']:.4f}")
-    assert_readme_says(f"the gap to the equal-size-bin scorecard is {CHALLENGERS['interpretability_price_holdout_auc']:.3f}")
+def test_loss_avoided_does_not_depend_on_the_flat_lgd():
+    # The README says one flat LGD leaves the loss-avoided shares unchanged.
+    # Loss avoided is 1 - loss(policy) / loss(everyone), and the LGD cancels.
+    everyone = policy_at(1.0)
+    for rate in (0.9, 0.8, 0.7):
+        row = policy_at(rate)
+        share = 1 - row["credit_loss"] / everyone["credit_loss"]
+        assert abs(share - row["loss_avoided_pct"]) < 1e-9
 
 
 def test_selection_gates():
-    assert_readme_says(f"{METRICS['n_candidate_features']} candidate characteristics")
-    assert_readme_says(
-        f"Three gates cut {METRICS['n_candidate_features']} characteristics to {METRICS['n_features_kept']}"
-    )
-    assert_readme_says(f"This leaves {METRICS['n_after_iv_screen']}.")
-    assert_readme_says(f"This leaves {METRICS['n_after_correlation_gate']}.")
-    assert_readme_says(f"This leaves {METRICS['n_features_kept']}, and every remaining coefficient is negative")
-    assert_readme_says(f"{len(METRICS['sign_gate_removed'])} characteristics, including age")
     assert METRICS["all_coefficients_negative"] is True
-
-
-def test_prohibited_basis_ablation():
-    ablation = METRICS["prohibited_basis_ablation"]
-    assert_readme_says(
-        f"raise AUC only from {ablation['val_auc_sklearn_final_features']:.4f} to "
-        f"{ablation['val_auc_sklearn_with_prohibited_bases']:.4f}"
-    )
-
-
-def test_from_scratch_solver_agreement():
-    assert_readme_says(f"correlate with scikit-learn's at {METRICS['pred_corr_vs_sklearn']:.6f}")
-    assert_readme_says(f"largest coefficient difference is {METRICS['coef_diff_max_vs_sklearn']:.4f}")
-
-
-def test_intercept_correction_and_odds():
-    assert_readme_says(
-        f"from {METRICS['intercept_balanced']:.4f} to {METRICS['intercept_prior_corrected']:.4f}"
-    )
-    assert_readme_says(f"about {METRICS['train_good_to_bad_odds']:.1f} times as much as a repayer")
+    assert_readme_says(f"This leaves {METRICS['n_features_kept']}, and every remaining coefficient is negative")
+    assert METRICS["n_numeric_features_monotonic_woe"] == METRICS["n_numeric_features_kept"]
 
 
 def test_example_decline_reasons():
     example = METRICS["example_declined_applicant"]
-    assert_readme_says(
-        f"who scored {example['score']:.0f}, below the {example['cut_off_score_at_80pct_approval']:.1f} cut-off"
-    )
     reasons = example["reasons_points_below_best_bin"]
     assert_readme_says(f"`{reasons[0]['feature']}` ({reasons[0]['points']:.1f} points below the best bin)")
     assert_readme_says(f"`{reasons[1]['feature']}` ({reasons[1]['points']:.1f})")
     assert_readme_says(f"`{reasons[2]['feature']}` ({reasons[2]['points']:.1f})")
-
-
-def test_monotonic_characteristics():
-    validation = CHALLENGERS["validation"]["champion"]
-    assert_readme_says(
-        f"only {validation['n_numeric_monotonic']} of {validation['n_numeric_kept']} numeric characteristics"
-    )
-    assert METRICS["n_numeric_features_monotonic_woe"] == METRICS["n_numeric_features_kept"]
-    assert_readme_says(f"all {METRICS['n_numeric_features_kept']} numeric characteristics in the final model")
 
 
 def test_readme_test_count_matches_tests_folder():
