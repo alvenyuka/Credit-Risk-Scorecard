@@ -67,7 +67,7 @@ The steps follow the order of the work: start simple, add one idea at a time. Th
 
 3. **Bin each characteristic and replace it with Weight of Evidence.** Weight of Evidence (WoE) compares, for one group of applicants (a bin), its share of all repayers with its share of all defaulters, on a log scale. Positive means safer than average, negative means riskier. Numeric characteristics are first cut into ten bins of equal size, text characteristics get one bin per level, and missing values get their own bin because "no bureau record" can carry information. Code: `src/woe_iv.py`.
 
-   ![Weight of Evidence by bin of the external bureau score average: negative for low scores, rising to positive for high scores](figs/woe_ext_source_mean.png)
+   ![Weight of Evidence by bin of the external credit score average: negative for low scores, rising to positive for high scores](figs/woe_ext_source_mean.png)
 
    *Low external score bins are riskier than average (red), high ones safer (blue).*
 
