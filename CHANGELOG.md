@@ -12,10 +12,25 @@ tag is created when the pull request that carries it is merged.
 ## [1.1.0] - 2026-10-24
 
 The notebook becomes a guided build a newcomer can follow cell by cell. No
-model figure changes: `outputs/results.json`, `business_impact.json`,
-`challengers.json` and `scorecard_points.json` are identical to 1.0.0.
+model figure changes: `outputs/results.json`, `challengers.json` and
+`scorecard_points.json` are identical to 1.0.0, and `business_impact.json`
+differs only in its `lgd_basis` text.
 
 ### Changed
+
+- Notebook comments describe their own lines: 76 generic, repeated comments
+  are replaced, three that described the wrong line are corrected, and
+  subplot and tick lines get their own comments.
+- Notebook text: a Limitations entry on selection bias (every row is a loan
+  already granted; new applicants need reject inference or through-the-door
+  data), the external scores as third-party values whose timing is assumed
+  rather than checked for leakage, IFRS 9 defined on first use with the
+  90-days-past-due backstop worded as Basel's and IFRS 9's, and age's sign
+  flip no longer traced to named characteristics.
+- `src/business_impact.py` writes the corrected `lgd_basis` wording, and
+  `outputs/business_impact.json` is regenerated from the saved holdout
+  scores (the other 44 leaves and both figures are unchanged).
+- The validation report gives the paired lift interval for the benchmark.
 
 - `Credit_Risk_Scorecard.ipynb` (written by `build_notebook.py`) is rebuilt in
   three parts, Prepare Data, Build Model and Communicate Results, of numbered

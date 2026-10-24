@@ -110,7 +110,8 @@ The default rate falls in every step from the riskiest decile to the safest, a 2
 | Logistic regression, application table only | 0.7467 | application fields | Yes, but no binning or points |
 
 The application-only benchmark is fitted by `src/baseline_model.py` and its AUC is printed by the notebook
-(`application-only benchmark AUC: 0.7467`). It sits 0.007 below the scorecard, so the six history tables add
+(`application-only benchmark AUC: 0.7467`). It sits 0.007 below the scorecard (paired bootstrap on the same 500
+resamples: 0.0073, 95% interval 0.0047 to 0.0101, in `outputs/notebook_run.json`), a real but small lift, so the six history tables add
 little ranking power: most of it comes from the three external scores in the application table, third-party
 model outputs whose construction is not published. The scorecard's case over this benchmark is a stated reason
 for every decline, fixed points and control over which characteristics enter, not better ranking.
