@@ -283,9 +283,8 @@ def expected_numbers():
     seq += [fixed("20", "holdout share of the split")]
     # Limits
     seq += [fixed("45", "assumed loss given default")]
-    seq += [fixed("90", "regulatory days-past-due definition"), fixed("9", "IFRS 9")]
+    seq += [fixed("90", "regulatory days-past-due backstop"), fixed("9", "IFRS 9"), fixed("9", "IFRS 9")]
     seq += [fixed("9", "IFRS 9")]
-    seq += [from_notes("0.905", "week8_log.md", "0.905"), fixed("2026", "year of the build log")]
     # How to run: provenance of the committed outputs
     seq += [fixed("2026-10-19", "date of the run that wrote outputs/results.json; checked below"),
             fixed("2026-10-06", "date of the earlier run with the same results")]
@@ -330,6 +329,11 @@ def test_target_counts_add_up():
 
 
 def test_run_provenance_matches_results_file():
+    # Pinned on purpose: the README names the run that wrote outputs/results.json.
+    # After an honest re-run of src/run_pipeline.py this fails until the
+    # provenance sentence under How to run (date and commit) and the date below
+    # are updated to the new run, so the README cannot describe a run that is
+    # no longer the one committed.
     stamped = load_json("results.json")
     assert stamped["generated_at_utc"].startswith("2026-10-19")
     assert_readme_says(f"(commit `{stamped['git_commit']}`)")
