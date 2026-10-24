@@ -80,3 +80,14 @@ against the files the pipeline wrote.
   validation report, the demo note and `src/business_impact.py`.
 - Limits: `TARGET` is Home Credit's payment-difficulty flag, not a regulatory
   default, and the IFRS 9 limit names lifetime PD, staging and scenarios.
+- Limits and validation finding F5: every row is a loan Home Credit already
+  granted, so the loss cuts are measured within an approved book; scoring new
+  applicants needs reject inference or through-the-door data.
+- The money table says the amounts are an upper bound (many flagged loans
+  cure) and that "approve everyone" means every loan in this book.
+- The external scores are described as third-party values in the application
+  table, not answers on the form; their timing is an assumption (F7).
+- The default-flag limit names the 90-days-past-due backstop as Basel's
+  definition (with unlikeliness to pay) and IFRS 9's rebuttable presumption.
+- Validation report and methodology cite the 2026-10-19 run at `e683632`; the
+  report adds the application-only benchmark and the default definition (F6).

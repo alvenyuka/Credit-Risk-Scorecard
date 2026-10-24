@@ -4,8 +4,8 @@ A validation of the scorecard in this repository, written the way a bank's model
 new application scorecard before it is used: is it built on sound principles, does it rank and price risk
 correctly, is it implemented as specified, and what must be fixed before it could be relied on.
 
-Every figure below is read from a file the pipeline writes: `outputs/results.json` (generated 2026-10-06 at
-commit `75ef602`), `outputs/challengers.json` and `outputs/business_impact.json`. The report was prepared by the
+Every figure below is read from a file the pipeline writes: `outputs/results.json` (generated 2026-10-19 at
+commit `e683632`, the same results as the 2026-10-06 run at `75ef602`), `outputs/challengers.json` and `outputs/business_impact.json`. The report was prepared by the
 model's author; an independent validator should repeat the tests in section 9 before relying on it.
 
 ## 1. Summary
@@ -17,11 +17,13 @@ model's author; an independent validator should repeat the tests in section 9 be
 | Calibration | Predicted and observed default rates within 0.40 percentage points in every decile; 20.2:1 observed odds where 20:1 is designed | Satisfactory |
 | Implementation | From-scratch logistic regression matches scikit-learn: prediction correlation 0.999999, largest coefficient gap 0.0023 | Satisfactory |
 | Stability over time | Not testable: the data has no application dates | **Open finding** |
-| Benchmarking | LightGBM reaches AUC 0.781 on the same holdout, 0.027 above the scorecard | Accepted trade-off |
+| Benchmarking | LightGBM reaches AUC 0.781 on the same holdout, 0.027 above the scorecard; an application-only logistic regression reaches 0.7467, 0.007 below it | Accepted trade-off |
+| Population | Every row is a loan Home Credit already granted; refused applicants have no outcome | **Open finding** |
 
 **Conclusion:** fit for its stated purpose, ranking applicants and explaining declines on this dataset, with one
-open finding. Before use on a live portfolio it needs an out-of-time test on dated applications from that
-portfolio.
+two open findings. Before use on a live portfolio it needs an out-of-time test on dated applications from that
+portfolio, and a test on through-the-door applications (or reject inference) because it was built only on
+loans that were already approved.
 
 ## 2. Scope and intended use
 
@@ -29,7 +31,10 @@ portfolio.
   characteristics that cost the applicant most points given as reasons for each decline.
 - **Not covered:** loss given default and exposure at default (the model estimates probability of default only),
   pricing, limit setting, and behavioural scoring of existing borrowers.
-- **Data:** Home Credit Default Risk, 307,511 applications across 8 linked tables. Training and validation are a
+- **Data:** Home Credit Default Risk, 307,511 applications across 8 linked tables. Each row is a granted loan
+  (the data dictionary: "ID of loan in our sample"), so the population is Home Credit's approved book, not
+  everyone who applied. The target is Home Credit's payment-difficulty flag (late on at least one of the first
+  instalments), not a 90-days-past-due default. Training and validation are a
   random stratified 80/20 split; the bad rate is 8.07% in both.
 
 ## 3. Conceptual soundness
@@ -102,6 +107,13 @@ The default rate falls in every step from the riskiest decile to the safest, a 2
 | Scorecard (this model) | 0.754 | 32 | Yes |
 | Scorecard without coarse classing | 0.759 | 37 (11 of 32 numeric monotonic) | Partly |
 | LightGBM challenger | 0.781 | all | No |
+| Logistic regression, application table only | 0.7467 | application fields | Yes, but no binning or points |
+
+The application-only benchmark is fitted by `src/baseline_model.py` and its AUC is printed by the notebook
+(`application-only benchmark AUC: 0.7467`). It sits 0.007 below the scorecard, so the six history tables add
+little ranking power: most of it comes from the three external scores in the application table, third-party
+model outputs whose construction is not published. The scorecard's case over this benchmark is a stated reason
+for every decline, fixed points and control over which characteristics enter, not better ranking.
 
 The gradient-boosted challenger ranks better by 0.027 AUC. The scorecard is preferred because every decline must
 carry a reason a customer and a regulator can read, and because its points can be audited by hand. A lender could
@@ -127,9 +139,12 @@ and 70% approval.
 | # | Finding | Severity | Action |
 |---|---|---|---|
 | F1 | No out-of-time validation. The data has no application dates, so stability on a later population is untested. The train-to-holdout PSI of 0.0002 only confirms that the random split is random. | High | Re-validate on dated applications from the target portfolio, with quarterly PSI on scores and on each characteristic. |
-| F2 | One illustrative loss-given-default figure for every loan: 45%, borrowed from the Basel foundation-IRB supervisory value for senior unsecured claims on banks and other financial institutions. Basel sets no supervisory LGD for retail exposures; a bank using internal ratings estimates its own. A flat LGD scales every policy's loss equally, so the loss-avoided percentages do not depend on it, only the money amounts. | Medium | Replace with a portfolio LGD estimate before quoting loss figures in money. |
+| F2 | One illustrative loss-given-default figure for every loan: 45%, borrowed from the Basel foundation-IRB supervisory value for senior unsecured claims on banks and other financial institutions. Basel sets no supervisory LGD for retail exposures; a bank using internal ratings estimates its own. A flat LGD scales every policy's loss equally, so the loss-avoided percentages do not depend on it, only the money amounts. | Medium | Replace with a portfolio LGD estimate before quoting loss figures in money. The money amounts also treat every flagged loan's full credit amount as exposed, and many payment-difficulty loans cure, so they are an upper bound. The `lgd_basis` text in `outputs/business_impact.json` predates this wording. |
 | F3 | The sign gate removed 15 characteristics, including credit amount and annuity, which carry real information. | Low | Accepted for explainability; monitor through the LightGBM challenger (section 6). |
 | F4 | The currency of the amounts is not stated in the source data. | Low | Quote losses as percentages, as the README does. |
+| F5 | Selection bias. Every row is a loan Home Credit already granted; applicants it refused have no outcome and are not in the data, and their default rate is likely higher. The loss avoided at each cut-off and the "approve everyone" baseline are measured within that approved book. | Medium | Before scoring new applicants, apply reject inference or validate on through-the-door applications with known outcomes. |
+| F6 | Default definition. `TARGET` is Home Credit's payment-difficulty flag (late on at least one of the first instalments), not the 90-days-past-due backstop of Basel's default definition (with unlikeliness to pay) or IFRS 9's rebuttable presumption. The PD is a probability of that flag. | Medium | Re-label on the lender's own default definition and recalibrate before using the PD for capital or provisions. |
+| F7 | Vendor dependency. The strongest characteristics are the three external scores, whose construction is not published and whose timing is not documented; that they exist at application time is assumed. | Low | Obtain the vendors' documentation and confirm the scores are drawn before the decision. |
 
 ## 9. Tests that reproduce this report
 
