@@ -41,6 +41,8 @@ a leak, it's arithmetic: it's the mean of the other three, so of course it's
 at least as separating as any one of them. Keeping all four in the same
 model is mild redundancy, not new information; worth revisiting in Week 8.
 
+Correction 2026-10-24: the data dictionary says only 'Normalized score from external data source', so these are not known to be bureau scores and their timing is assumed, not proven; see docs/METHODOLOGY.md Known Limitations.
+
 25 of 37 candidate features cleared the IV >= 0.02 bar and were kept for
 the model.
 

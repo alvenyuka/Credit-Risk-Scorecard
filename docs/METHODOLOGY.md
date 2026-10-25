@@ -34,7 +34,7 @@ here and could not answer that question directly.
 So this is a scorecard: Weight of Evidence bins, a logistic regression over them,
 and a points table where every bin contributes a fixed number of points. A
 declined applicant's reasons come back as "58.1 points below the best band on an
-external bureau score" rather than a probability with no account of itself. The
+external credit score" rather than a probability with no account of itself. The
 direction of every characteristic is enforced, and each bin's WoE and points can
 be read off a table before the model is used.
 
@@ -158,7 +158,7 @@ commits use the old names.
 
 ## Methodology
 
-1. **Baseline.** A logistic regression on the application form alone sets the
+1. **Baseline.** A logistic regression on the application table alone sets the
    floor: AUC 0.7467 on the holdout (printed by the notebook).
 2. **Statistics implemented and verified.** Weight of Evidence, Information Value,
    a gradient-descent logistic regression and AUC, GINI, KS and PSI are written in
@@ -236,9 +236,10 @@ The Old pipeline column is read from the pre-rebuild README and `BUILD_STATUS.md
 at commit `a8708a0~1`; every figure in the This rebuild column is in
 `results.json`.
 
-`results.json` records `git_commit: 75ef602`, the commit the run started from,
-because the run was made before its code was committed; the code that produced
-these figures is the commit that adds coarse classing (`src/challengers.py`).
+`results.json` records `generated_at_utc: 2026-10-19` and `git_commit: e683632`.
+That run gave the same results as the 2026-10-06 run at `75ef602`, which was made
+before its code was committed; the code that produced those figures is the commit
+that adds coarse classing (`src/challengers.py`).
 
 | | This rebuild | Old pipeline |
 |---|---:|---:|
@@ -280,9 +281,11 @@ coefficients unstable without hurting predictions.
 
 The strongest single feature is `EXT_SOURCE_MEAN` at IV 0.6091, which trips this
 repo's own `iv_strength()` red flag for "suspiciously strong (check for
-leakage)". It was checked and kept: `EXT_SOURCE_1/2/3` are external bureau
-scores supplied with the application, they are legitimate pre-decision inputs,
-and their three components sit at IV 0.15 to 0.33 individually. The mean of them
+leakage)". It was not proven safe, it was kept on an assumption: the Home
+Credit data dictionary describes `EXT_SOURCE_1/2/3` only as "Normalized score
+from external data source", so that they are available at application time is
+assumed, not proven (see Known Limitations). Their three components sit at
+IV 0.15 to 0.33 individually. The mean of them
 is stronger than any one, which is what an average of three noisy scores of the
 same thing should be.
 
@@ -334,13 +337,16 @@ What it does not do is listed under Known Limitations below, once each.
 - **The thresholds, the cut-offs and the reported metrics share one holdout.** The gates are fitted on the training split, but the 0.01 IV threshold and the business cut-offs were chosen with this holdout in view; the bootstrap interval covers sampling noise, not that choice.
 - **Prohibited bases are excluded.** `CODE_GENDER` and `NAME_FAMILY_STATUS` are sex and marital status, prohibited bases under ECOA and Regulation B, so they never enter any feature list (`PROHIBITED_BASES` in `src/feature_lists.py`, pinned by `tests/test_fair_lending.py`). Adding them back to the final feature set would move AUC from 0.7540 to 0.7553 (scikit-learn, same split, `prohibited_basis_ablation` in `results.json`). `CNT_FAM_MEMBERS`, `CNT_CHILDREN` and `INCOME_PER_FAM_MEMBER` can act as proxies for marital status and were reviewed: all three fall below the IV gate, so none is in the scorecard (`outputs/scorecard_points.json` lists every kept feature). Age is not in the scorecard either (see Methodology, step 7).
 - **Zero-inflated columns are only partly rescued.** Coarse classing gives 0 a bin of its own in a column that is mostly zero, so the delinquency aggregates keep some of their tail. Merging for monotonicity can still leave two such columns on the same split: `BUREAU_OVERDUE_MAX` and `BUREAU_OVERDUE_MEAN` correlate at r = 1.000 once WoE-encoded, and the correlation gate drops one. `tests/test_woe_iv.py` pins both the decile behaviour and the zero bin.
-- **PD only, not a full IFRS 9 loss estimate.** This scorecard outputs a probability of default; loss given default and exposure at default are separate models not built here.
+- **Approved book only, no reject inference.** Every row is a loan Home Credit already granted. Applicants it refused have no outcome and are not in the data, so the results describe applicants who were already approved, not everyone who applies.
+- **The external scores are opaque vendor scores and their timing is assumed.** `EXT_SOURCE_1/2/3` are described only as "Normalized score from external data source". Who produced them and when they were drawn is not documented, so that they exist before the decision is an assumption. If they were drawn after the decision, the strong IV would be leakage.
+- **PD of Home Credit's flag, not a regulatory default.** `TARGET` is Home Credit's own "payment difficulties" flag, not the 90-days-past-due default definition used by Basel capital rules and IFRS 9.
+- **PD only, not a full IFRS 9 loss estimate.** This scorecard outputs a probability of default over one outcome window. An IFRS 9 provision also needs lifetime PD term structures, significant-increase-in-credit-risk staging, forward-looking scenarios, and loss given default and exposure at default models, none of which are built here.
 - **The rebuild-vs-old-pipeline comparison in Results isn't a controlled benchmark**: different train/test splits, not an apples-to-apples A/B.
 
 ## Tests
 
 ```bash
-python -m pytest        # 71 tests, about 20 seconds
+python -m pytest        # 87 tests, about 20 seconds
 ```
 
 The from-scratch implementations are the whole point of this repo, so they are

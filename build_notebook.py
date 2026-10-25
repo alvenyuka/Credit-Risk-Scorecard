@@ -52,7 +52,7 @@ around them rather than around a single model:
 - **Part 1, what the data can support** (sections 1 to 6): the finished product in miniature, then the
   application table loaded and checked, explored, joined to the applicant's credit history from the other
   seven tables, and turned into candidate characteristics with a holdout kept back. Two facts surface here
-  that shape everything later: the three external bureau scores carry far more signal than the application
+  that shape everything later: the three external credit scores carry far more signal than the application
   form, and several characteristics do not move in one direction, which is why bins are coarse-classed.
 - **Part 2, building the scorecard** (sections 7 to 10): the benchmarks it has to beat, Weight of Evidence and
   Information Value by hand and then on every candidate, three selection gates with a stated reason for every

@@ -12,7 +12,8 @@ Feature choices:
 - Ratio features (credit to income, annuity to income, credit to goods price)
   are more comparable across applicants than raw amounts, which are skewed and
   scale with income.
-- EXT_SOURCE_1/2/3 are external bureau-style scores supplied with the data.
+- EXT_SOURCE_1/2/3 are external scores from an undisclosed third-party source
+  (timing assumed; see docs/METHODOLOGY.md Known Limitations).
   Their missingness is informative, so the per-row mean, spread and count of
   present values are kept as features rather than imputed away.
 """
