@@ -39,6 +39,7 @@ def load_json(name):
 METRICS = load_json("results.json")["metrics"]
 POLICIES = load_json("business_impact.json")["policies"]
 CHALLENGERS = load_json("challengers.json")
+NOTEBOOK_RUN = load_json("notebook_run.json")
 
 
 def notebook_printed_text():
@@ -179,6 +180,8 @@ def expected_numbers():
     holdout = CHALLENGERS["holdout"]
     rows = from_notebook("307,511", "307511")
     baseline = from_notebook("0.7467", "application-only benchmark AUC: 0.7467")
+    assert f"{NOTEBOOK_RUN['benchmark_auc']:.4f}" == baseline
+    lift_lo, lift_hi = NOTEBOOK_RUN["auc_lift_ci95_paired_bootstrap"]
     placeholder = from_notebook("365,243", "365243")
 
     seq = []
@@ -198,7 +201,8 @@ def expected_numbers():
     seq += [result(f"{m['calibration_max_abs_gap'] * 100:.1f}")]
     seq += [result(f"{lightgbm:.3f}"), result(f"{lightgbm - m['val_auc']:.3f}"), result(auc),
             fixed("11", "step number")]
-    seq += [baseline, result(f"{m['val_auc'] - float(baseline):.3f}"), result(auc4)]
+    seq += [baseline, result(f"{NOTEBOOK_RUN['auc_lift_over_benchmark']:.3f}"), result(auc4),
+            fixed("95", "interval level"), result(f"{lift_lo:.3f}"), result(f"{lift_hi:.3f}")]
     seq += [result(str(m["n_features_kept"]))]                   # demo line
     # Measures table
     seq += [result(n_holdout)]
@@ -229,8 +233,7 @@ def expected_numbers():
     # Step 1
     seq += [result(bad_rate), result(good_rate), placeholder,
             result(f"{int(placeholder.replace(',', '')) / 365.25:,.0f}")]
-    seq += [fixed("282,686", "bar label in figs/target_balance.png; sum checked below"),
-            fixed("24,825", "bar label in figs/target_balance.png; sum checked below"),
+    seq += [from_notebook("282,686", "282686"), from_notebook("24,825", "24825"),
             result(good_rate), result(bad_rate)]
     # Step 2
     seq += [baseline, fixed("2026", "year of the build log"),
@@ -252,7 +255,7 @@ def expected_numbers():
             fixed("640", "600 plus one PDO")]
     # Step 9
     seq += [fixed("20", "holdout share of the split")]
-    seq += [result(auc), result(ks), fixed("571", "score at the KS gap, annotated in figs/roc_and_ks.png")]
+    seq += [result(auc), result(ks), from_notebook("571", "at 571 points")]
     # Step 10
     seq += [result(f"{example['score']:.0f}"), result(f"{example['cut_off_score_at_80pct_approval']:.1f}"),
             result(f"{p80['approval_rate']:.0%}".rstrip("%")), result(f"{reasons[0]['points']:.1f}"),

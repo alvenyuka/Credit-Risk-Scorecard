@@ -154,6 +154,29 @@ def bootstrap_auc_ci(y_true, y_score, n_boot: int = 500, seed: int = 42,
     return float(lo), float(hi)
 
 
+def bootstrap_auc_difference(y_true, score_a, score_b, n_boot: int = 500, seed: int = 42,
+                             level: float = 0.95) -> tuple:
+    """AUC of score_a minus AUC of score_b, with a paired percentile bootstrap interval.
+
+    Both scores are recomputed on the same resampled rows each time, so the interval
+    describes the difference between two models scored on one holdout, which two
+    separate intervals cannot.
+    """
+    y_true = np.asarray(y_true)
+    score_a = np.asarray(score_a, dtype=float)
+    score_b = np.asarray(score_b, dtype=float)
+    difference = auc_rank_sum(y_true, score_a) - auc_rank_sum(y_true, score_b)
+    rng = np.random.default_rng(seed)
+    n = len(y_true)
+    boot = np.empty(n_boot)
+    for b in range(n_boot):
+        idx = rng.integers(0, n, n)
+        boot[b] = auc_rank_sum(y_true[idx], score_a[idx]) - auc_rank_sum(y_true[idx], score_b[idx])
+    tail = (1 - level) / 2 * 100
+    lo, hi = np.percentile(boot, [tail, 100 - tail])
+    return float(difference), float(lo), float(hi)
+
+
 if __name__ == "__main__":
     from sklearn.metrics import roc_auc_score
     from scipy.stats import ks_2samp

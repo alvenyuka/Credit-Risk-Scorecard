@@ -9,6 +9,54 @@ tag is created when the pull request that carries it is merged.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-24
+
+The notebook becomes a guided build a newcomer can follow cell by cell. No
+model figure changes: `outputs/results.json`, `challengers.json` and
+`scorecard_points.json` are identical to 1.0.0, and `business_impact.json`
+differs only in its `lgd_basis` text.
+
+### Changed
+
+- Notebook comments describe their own lines: 76 generic, repeated comments
+  are replaced, three that described the wrong line are corrected, and
+  subplot and tick lines get their own comments.
+- Notebook text: a Limitations entry on selection bias (every row is a loan
+  already granted; new applicants need reject inference or through-the-door
+  data), the external scores as third-party values whose timing is assumed
+  rather than checked for leakage, IFRS 9 defined on first use with the
+  90-days-past-due backstop worded as Basel's and IFRS 9's, and age's sign
+  flip no longer traced to named characteristics.
+- `src/business_impact.py` writes the corrected `lgd_basis` wording, and
+  `outputs/business_impact.json` is regenerated from the saved holdout
+  scores (the other 44 leaves and both figures are unchanged).
+- The validation report gives the paired lift interval for the benchmark.
+
+- `Credit_Risk_Scorecard.ipynb` (written by `build_notebook.py`) is rebuilt in
+  three parts, Prepare Data, Build Model and Communicate Results, of numbered
+  steps. Each step has one instruction, a one-line explanation of the idea
+  behind it, one small code cell with a comment on each line, printed output,
+  and a "Check your work" cell that stops the run if the step went wrong.
+- The notebook reads the raw CSVs with `pd.read_csv`, works each calculation
+  by hand, asserts that the tested function in `src/` gives the same answer,
+  and checks every figure against `outputs/results.json`.
+- Every top-level statement in a code cell has a plain-words comment above
+  it (or sits in a group of at most three under one).
+- The lift over the application-only benchmark is tested with a paired
+  bootstrap of the AUC difference (`bootstrap_auc_difference` in
+  `src/metrics_scratch.py`): 0.0073 AUC, 95% interval 0.0047 to 0.0101.
+- The example applicant is scored with the public `bin_labels` in
+  `src/woe_iv.py`; sections are lettered (1A, 2B) so they no longer collide
+  with step numbers.
+- Domain wording: the flat 45% LGD, the PDO definition, the default flag
+  behind PD and the IFRS 9 limitation, as in 1.0.0's README fixes.
+- README paragraph on the notebook updated to describe the guided build, and
+  Results gives the paired interval for the lift over the benchmark.
+- `outputs/notebook_run.json` records the new run, plus the benchmark AUC, the
+  lift and its interval. `tests/test_readme_numbers.py` checks the README's
+  lift interval against it, and the bar labels and KS cut-off against the
+  notebook's printed output.
+
 ## [1.0.0] - 2026-10-24
 
 The first tagged release: the scorecard as published, with its figures tested

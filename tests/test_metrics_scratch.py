@@ -26,7 +26,7 @@ import pytest
 from scipy.stats import ks_2samp
 from sklearn.metrics import roc_auc_score
 
-from metrics_scratch import auc_rank_sum, gini, ks_statistic, psi
+from metrics_scratch import auc_rank_sum, bootstrap_auc_ci, bootstrap_auc_difference, gini, ks_statistic, psi
 
 SEED = 42
 
@@ -116,3 +116,30 @@ def test_psi_is_symmetric_enough_to_be_reported(scores_and_labels):
     forward, backward = psi(a, b), psi(b, a)
     assert forward > 0 and backward > 0
     assert 0.5 < forward / backward < 2.0
+
+
+def test_paired_auc_difference_is_the_difference_of_aucs(scores_and_labels):
+    # The point estimate is AUC(a) - AUC(b), and its interval contains it
+    y, score = scores_and_labels
+    rng = np.random.default_rng(SEED)
+    weaker = score + rng.normal(0, 1.0, len(score))
+    difference, lo, hi = bootstrap_auc_difference(y, score, weaker, n_boot=200, seed=SEED)
+    assert abs(difference - (roc_auc_score(y, score) - roc_auc_score(y, weaker))) < 1e-12
+    assert lo < difference < hi
+    assert lo > 0, "the noisier score should rank worse across the whole interval"
+
+
+def test_paired_auc_difference_of_a_score_with_itself_is_exactly_zero(scores_and_labels):
+    # Pairing means both models see the same rows: identical scores give zero on every resample
+    y, score = scores_and_labels
+    assert bootstrap_auc_difference(y, score, score, n_boot=50, seed=SEED) == (0.0, 0.0, 0.0)
+
+
+def test_paired_bootstrap_draws_the_same_rows_as_the_single_model_interval(scores_and_labels):
+    # Same seed, same resamples: against a constant score (AUC 0.5 on every resample)
+    # the paired interval is the single-model interval shifted by 0.5
+    y, score = scores_and_labels
+    constant = np.zeros(len(score))
+    _, lo, hi = bootstrap_auc_difference(y, score, constant, n_boot=100, seed=SEED)
+    single_lo, single_hi = bootstrap_auc_ci(y, score, n_boot=100, seed=SEED)
+    assert abs(lo - (single_lo - 0.5)) < 1e-12 and abs(hi - (single_hi - 0.5)) < 1e-12

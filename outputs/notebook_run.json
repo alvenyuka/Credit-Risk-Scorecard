@@ -1,7 +1,7 @@
 {
-  "run_date_utc": "2026-10-19",
-  "runtime_minutes": 10,
-  "git_commit": "e7b3f2032cad6ec434369d88e04045c84c314bab",
+  "run_date_utc": "2026-10-24",
+  "runtime_minutes": 7,
+  "git_commit": "cbe41097bafc3d36be48ae9cece6a5ad48085efd",
   "uncommitted_code_changes": false,
   "python": "3.13.9",
   "packages": {
@@ -15,5 +15,11 @@
   "results_checked_against": "outputs/results.json",
   "entries_checked": 46,
   "holdout_auc": 0.7539670402143243,
+  "benchmark_auc": 0.7466517060934912,
+  "auc_lift_over_benchmark": 0.0073153341208331835,
+  "auc_lift_ci95_paired_bootstrap": [
+    0.0046751615180330285,
+    0.010050957873771827
+  ],
   "characteristics_kept": 32
 }

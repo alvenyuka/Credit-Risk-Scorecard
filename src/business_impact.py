@@ -10,9 +10,10 @@ LGD is an assumption, not an output: an illustrative flat 45%, borrowed from the
 foundation-IRB supervisory value for senior unsecured claims on banks and other
 financial institutions (retail IRB has no supervisory LGD; a bank estimates its own).
 One flat LGD scales every policy's loss equally, so the loss-avoided percentages do
-not depend on it; only the money amounts do. The lgd_basis string written to
-business_impact.json predates this wording and is left as it is so the committed
-outputs stay byte-identical until the next full re-run. Home Credit does not state the currency of AMT_CREDIT,
+not depend on it; only the money amounts do. The money amounts are an upper
+bound: "defaulted" is Home Credit's payment-difficulty flag and many such loans
+cure. Every row is a loan Home Credit already granted, so "approve everyone"
+means every loan in that approved book. Home Credit does not state the currency of AMT_CREDIT,
 so amounts are in the dataset's own currency units.
 
 Reads the holdout scores that run_pipeline.py saves (outputs/val_scores.parquet) and
@@ -134,7 +135,9 @@ def main():
     out.write_text(json.dumps({
         "assumptions": {
             "lgd": LGD,
-            "lgd_basis": "Basel foundation-IRB supervisory LGD for senior unsecured exposures",
+            "lgd_basis": ("illustrative flat figure borrowed from the Basel foundation-IRB supervisory LGD for "
+                          "senior unsecured claims on banks and other financial institutions; Basel sets no "
+                          "supervisory LGD for retail exposures"),
             "exposure": "AMT_CREDIT, the credit amount of the application",
             "currency": "not stated in the Home Credit data; figures are in its own currency units",
             "population": f"the {len(df):,}-applicant holdout used for every other metric",
