@@ -1,6 +1,6 @@
 # Credit Risk Scorecard
 
-A points-based score that tells a lender which loan applicants are likely to default, and gives a reason for every decline, built on 307,511 Home Credit applications.
+A points-based score that estimates each applicant's probability of default and gives a reason for every decline, built on 307,511 Home Credit applications.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)](#how-to-run)
